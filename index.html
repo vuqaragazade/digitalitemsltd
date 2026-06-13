@@ -2160,7 +2160,7 @@ let allProducts = JSON.parse(localStorage.getItem('di_products') || 'null') || P
 let adminLoggedIn = false;
 const ADMIN_PASS = 'admin2025di';
 // Worker URL — set this after deploying Cloudflare Worker
-const WORKER_URL = localStorage.getItem('di_worker_url') || '';
+const WORKER_URL = localStorage.getItem('di_worker_url') || 'https://digitalitems-api.agazade-vuqar-1996.workers.dev';
 
 // ════════════════════════════════════════
 // NAVIGATION
@@ -2483,12 +2483,24 @@ async function processPayment() {
       const res = await fetch(WORKER_URL + '/create-payment', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ orderId, amount: Math.round(total * 100), email })
+        body: JSON.stringify({
+          orderId,
+          amount: Math.round(total * 100),
+          email,
+          name,
+          telegram: document.getElementById('co-tg').value.trim(),
+          items: cart.map(c => ({name: c.name, qty: c.qty, price: c.price}))
+        })
       });
       const data = await res.json();
+      if (data.error) {
+        btn.disabled = false;
+        btn.innerHTML = '🔒 Pay with Card';
+        showToast('Payment error: ' + data.error);
+        return;
+      }
       paymentUrl = data.url;
     } else {
-      // Fallback: show message that worker URL is not configured
       btn.disabled = false;
       btn.innerHTML = '🔒 Pay with Card';
       showToast('Payment gateway not configured. Please contact admin.');
@@ -2522,32 +2534,48 @@ async function processPayment() {
 // ════════════════════════════════════════
 // AUTH
 // ════════════════════════════════════════
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass = document.getElementById('login-pass').value;
   if (!email || !pass) { showToast('Please fill all fields'); return; }
-  const user = users.find(u => u.email === email && u.pass === pass);
-  if (!user) { showToast('Invalid email or password'); return; }
-  currentUser = user;
-  localStorage.setItem('di_user', JSON.stringify(currentUser));
-  updateAuthUI();
-  navigate('account');
+  try {
+    const res = await fetch(WORKER_URL + '/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, password: pass })
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error); return; }
+    currentUser = data.user;
+    localStorage.setItem('di_user', JSON.stringify(currentUser));
+    updateAuthUI();
+    navigate('account');
+  } catch(e) {
+    showToast('Connection error. Please try again.');
+  }
 }
 
-function doRegister() {
+async function doRegister() {
   const name = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();
   const pass = document.getElementById('reg-pass').value;
   if (!name || !email || !pass) { showToast('Please fill all fields'); return; }
-  if (users.find(u => u.email === email)) { showToast('Email already registered'); return; }
-  const user = { name, email, pass, orders: [], registered: new Date().toISOString() };
-  users.push(user);
-  localStorage.setItem('di_users', JSON.stringify(users));
-  currentUser = user;
-  localStorage.setItem('di_user', JSON.stringify(currentUser));
-  updateAuthUI();
-  navigate('account');
-  showToast('Account created successfully!');
+  try {
+    const res = await fetch(WORKER_URL + '/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, email, password: pass })
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error); return; }
+    currentUser = { name, email };
+    localStorage.setItem('di_user', JSON.stringify(currentUser));
+    updateAuthUI();
+    navigate('account');
+    showToast('Account created successfully!');
+  } catch(e) {
+    showToast('Connection error. Please try again.');
+  }
 }
 
 function doLogout() {
@@ -2575,39 +2603,53 @@ function updateAuthUI() {
   }
 }
 
-function renderAccount() {
+async function renderAccount() {
   if (!currentUser) return;
   document.getElementById('account-email').textContent = currentUser.email;
-  const userOrderIds = currentUser.orders || [];
-  const userOrders = orders.filter(o => userOrderIds.includes(o.id));
   const el = document.getElementById('user-orders');
-  if (userOrders.length === 0) {
-    el.innerHTML = '<div style="padding:32px 24px;text-align:center;color:var(--muted)">No orders yet</div>';
-    return;
+  el.innerHTML = '<div style="padding:32px 24px;text-align:center;color:var(--muted)">Loading orders...</div>';
+  try {
+    const res = await fetch(WORKER_URL + '/my-orders?email=' + encodeURIComponent(currentUser.email));
+    const data = await res.json();
+    const userOrders = data.orders || [];
+    if (userOrders.length === 0) {
+      el.innerHTML = '<div style="padding:32px 24px;text-align:center;color:var(--muted)">No orders yet</div>';
+      return;
+    }
+    el.innerHTML = userOrders.map(o => `
+      <div class="order-row" style="grid-template-columns:120px 1fr 100px 80px">
+        <span style="font-family:var(--font-display);font-size:12px;color:var(--muted)">${o.id}</span>
+        <span>${o.items.map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</span>
+        <span style="color:var(--accent1);font-weight:600">$${o.total.toFixed(2)}</span>
+        <span class="status-badge status-${o.status}">${o.status}</span>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="padding:32px 24px;text-align:center;color:var(--muted)">Could not load orders</div>';
   }
-  el.innerHTML = userOrders.map(o => `
-    <div class="order-row" style="grid-template-columns:120px 1fr 100px 80px">
-      <span style="font-family:var(--font-display);font-size:12px;color:var(--muted)">${o.id}</span>
-      <span>${o.items.map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</span>
-      <span style="color:var(--accent1);font-weight:600">$${o.total.toFixed(2)}</span>
-      <span class="status-badge status-${o.status}">${o.status}</span>
-    </div>
-  `).join('');
 }
 
 // ════════════════════════════════════════
 // ADMIN
 // ════════════════════════════════════════
-function adminLogin() {
+let adminPassword = '';
+async function adminLogin() {
   const pass = document.getElementById('admin-pass-input').value;
-  const stored = localStorage.getItem('di_admin_pass') || ADMIN_PASS;
-  if (pass === stored) {
+  if (!pass) { showToast('Enter password'); return; }
+  // Verify by trying to fetch orders
+  try {
+    const res = await fetch(WORKER_URL + '/orders', {
+      headers: { 'X-Admin-Password': pass }
+    });
+    if (res.status === 401) { showToast('Wrong password'); return; }
+    const data = await res.json();
+    adminPassword = pass;
     adminLoggedIn = true;
     document.getElementById('admin-login-screen').style.display = 'none';
     document.getElementById('admin-dashboard').style.display = 'block';
-    renderAdminOrders();
-  } else {
-    showToast('Wrong password');
+    renderAdminOrders(data.orders || []);
+  } catch(e) {
+    showToast('Connection error');
   }
 }
 
@@ -2625,35 +2667,40 @@ function adminTab(tab) {
   });
   document.querySelectorAll('.admin-nav-item').forEach(el => el.classList.remove('active'));
   event.target.classList.add('active');
-  if (tab === 'orders') renderAdminOrders();
+  if (tab === 'orders') renderAdminOrders(null);
   if (tab === 'products') renderAdminProducts();
   if (tab === 'users') renderAdminUsers();
 }
 
-function renderAdminOrders() {
-  const paid = orders.filter(o=>o.status==='paid');
-  const pending = orders.filter(o=>o.status==='pending');
-  document.getElementById('stat-total').textContent = orders.length;
+let adminOrders = [];
+async function renderAdminOrders(ordersData) {
+  if (ordersData) { adminOrders = ordersData; }
+  else {
+    try {
+      const res = await fetch(WORKER_URL + '/orders', { headers: { 'X-Admin-Password': adminPassword } });
+      const data = await res.json();
+      adminOrders = data.orders || [];
+    } catch(e) { adminOrders = []; }
+  }
+  const paid = adminOrders.filter(o=>o.status==='paid');
+  const pending = adminOrders.filter(o=>o.status==='pending');
+  document.getElementById('stat-total').textContent = adminOrders.length;
   document.getElementById('stat-paid').textContent = paid.length;
   document.getElementById('stat-pending').textContent = pending.length;
   document.getElementById('stat-revenue').textContent = '$' + paid.reduce((s,o)=>s+o.total,0).toFixed(2);
 
   const el = document.getElementById('admin-orders-list');
-  if (orders.length === 0) {
+  if (adminOrders.length === 0) {
     el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">No orders yet</div>';
     return;
   }
-  el.innerHTML = [...orders].reverse().map(o => `
+  el.innerHTML = adminOrders.map(o => `
     <div class="admin-table-row orders-grid">
       <span style="font-size:11px;color:var(--muted)">${o.id}</span>
-      <span>${o.email}</span>
-      <span style="font-size:12px;color:var(--muted)">${o.items.map(i=>i.name.substring(0,30)).join(', ')}</span>
+      <span>${o.email}<br><span style="font-size:11px;color:var(--muted)">${o.name||''}</span></span>
+      <span style="font-size:12px;color:var(--muted)">${(o.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</span>
       <span style="color:var(--accent1);font-weight:600">$${o.total.toFixed(2)}</span>
-      <select onchange="updateOrderStatus('${o.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-size:12px;cursor:pointer">
-        <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
-        <option value="paid" ${o.status==='paid'?'selected':''}>Paid</option>
-        <option value="failed" ${o.status==='failed'?'selected':''}>Failed</option>
-      </select>
+      <span class="status-badge status-${o.status}">${o.status}</span>
     </div>
   `).join('');
 }
@@ -2683,19 +2730,27 @@ function renderAdminProducts() {
   `).join('');
 }
 
-function renderAdminUsers() {
+async function renderAdminUsers() {
   const el = document.getElementById('admin-users-list');
-  if (users.length === 0) {
-    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">No users yet</div>';
-    return;
+  el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">Loading...</div>';
+  try {
+    const res = await fetch(WORKER_URL + '/users', { headers: { 'X-Admin-Password': adminPassword } });
+    const data = await res.json();
+    const users = data.users || [];
+    if (users.length === 0) {
+      el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">No users yet</div>';
+      return;
+    }
+    el.innerHTML = users.map(u => `
+      <div class="admin-table-row" style="grid-template-columns:1fr 120px 80px">
+        <span>${u.email}<br><span style="font-size:11px;color:var(--muted)">${u.name||''}</span></span>
+        <span style="color:var(--muted);font-size:12px">${new Date(u.registered).toLocaleDateString()}</span>
+        <span>—</span>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">Could not load users</div>';
   }
-  el.innerHTML = users.map(u => `
-    <div class="admin-table-row" style="grid-template-columns:1fr 120px 80px">
-      <span>${u.email}</span>
-      <span style="color:var(--muted);font-size:12px">${new Date(u.registered).toLocaleDateString()}</span>
-      <span>${(u.orders||[]).length}</span>
-    </div>
-  `).join('');
 }
 
 let editingProductId = null;
@@ -2721,7 +2776,7 @@ function editProduct(id) {
   document.getElementById('product-modal').classList.add('open');
 }
 
-function saveProduct() {
+async function saveProduct() {
   const name = document.getElementById('prod-name').value.trim();
   const price = parseFloat(document.getElementById('prod-price').value);
   const desc = document.getElementById('prod-desc').value.trim();
@@ -2734,15 +2789,30 @@ function saveProduct() {
     allProducts.push({id:'p'+Date.now(), name, price, desc, category});
   }
   localStorage.setItem('di_products', JSON.stringify(allProducts));
+  // Sync to Worker so all visitors see it
+  try {
+    await fetch(WORKER_URL + '/products', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ products: allProducts })
+    });
+  } catch(e) {}
   closeModal();
   renderAdminProducts();
   showToast('Product saved!');
 }
 
-function deleteProduct(id) {
+async function deleteProduct(id) {
   if (!confirm('Delete this product?')) return;
   allProducts = allProducts.filter(p => p.id !== id);
   localStorage.setItem('di_products', JSON.stringify(allProducts));
+  try {
+    await fetch(WORKER_URL + '/products', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ products: allProducts })
+    });
+  } catch(e) {}
   renderAdminProducts();
   showToast('Product deleted');
 }
@@ -2801,9 +2871,36 @@ function showToast(msg) {
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
+async function loadProductsFromServer() {
+  try {
+    const res = await fetch(WORKER_URL + '/products');
+    const data = await res.json();
+    if (data.products && data.products.length) {
+      allProducts = data.products;
+      localStorage.setItem('di_products', JSON.stringify(allProducts));
+      renderFeatured();
+    }
+  } catch(e) {}
+}
+
+// Handle payment redirect (?paid=ORDER or ?cancelled=ORDER)
+function handlePaymentRedirect() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('paid')) {
+    showToast('✓ Payment received! Thank you for your order.');
+    cart = []; saveCart(); updateCartUI();
+    history.replaceState(null, '', location.pathname);
+  } else if (params.get('cancelled')) {
+    showToast('Payment was cancelled.');
+    history.replaceState(null, '', location.pathname);
+  }
+}
+
 updateCartUI();
 updateAuthUI();
 renderFeatured();
+loadProductsFromServer();
+handlePaymentRedirect();
 
 // Secret admin route: navigate to /admin via URL hash
 window.addEventListener('hashchange', () => {
