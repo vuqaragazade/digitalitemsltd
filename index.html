@@ -2438,6 +2438,44 @@ function renderCheckout() {
   document.getElementById('order-total').textContent = '$' + cartTotal().toFixed(2);
 }
 
+let pollTimer = null;
+function pollOrderStatus(orderId, btn) {
+  let attempts = 0;
+  const maxAttempts = 120; // ~10 minutes (every 5s)
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    attempts++;
+    try {
+      const res = await fetch(WORKER_URL + '/order-status?id=' + encodeURIComponent(orderId));
+      const data = await res.json();
+      if (data.status === 'paid') {
+        clearInterval(pollTimer);
+        if (btn) { btn.innerHTML = '✓ Payment confirmed!'; }
+        showPaymentResult('success', orderId);
+      }
+    } catch(e) {}
+    if (attempts >= maxAttempts) {
+      clearInterval(pollTimer);
+      if (btn) { btn.innerHTML = '🔒 Pay with Card'; btn.disabled = false; }
+    }
+  }, 5000);
+}
+
+function showPaymentResult(status, orderId) {
+  const layout = document.querySelector('#page-checkout .checkout-layout');
+  if (!layout) return;
+  if (status === 'success') {
+    layout.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:48px 24px">
+        <div style="width:72px;height:72px;border-radius:50%;background:#16a34a20;color:#4ade80;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 24px;border:2px solid #16a34a40">✓</div>
+        <h1 style="font-family:var(--font-display);font-size:26px;font-weight:700;margin-bottom:12px">Payment Successful</h1>
+        <p style="color:var(--muted);max-width:420px;margin:0 auto 24px;line-height:1.7">Thank you for your order! Your payment has been received and your order is being processed. You'll receive your items shortly.</p>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;color:var(--muted);max-width:300px;margin:0 auto 24px">Order: <strong style="color:var(--accent1);font-family:monospace">${orderId}</strong></div>
+        <button class="btn btn-primary" onclick="navigate('home')">Back to Home</button>
+      </div>`;
+  }
+}
+
 async function processPayment() {
   const name = document.getElementById('co-name').value.trim();
   const email = document.getElementById('co-email').value.trim();
@@ -2515,7 +2553,7 @@ async function processPayment() {
     link.click();
 
     btn.disabled = false;
-    btn.innerHTML = '✓ Payment window opened';
+    btn.innerHTML = '⏳ Waiting for payment...';
 
     showToast('Payment page opened in a new tab');
 
@@ -2523,6 +2561,9 @@ async function processPayment() {
     cart = [];
     saveCart();
     updateCartUI();
+
+    // Poll the Worker for payment status (checks if Stripe confirmed)
+    pollOrderStatus(orderId, btn);
 
   } catch(err) {
     btn.disabled = false;
