@@ -2222,7 +2222,7 @@ function navigate(page, skipPush) {
   if (navEl) navEl.classList.add('active');
   window.scrollTo(0, 0);
 
-  // Update URL + title
+  // Update URL + title (real pages via History API)
   if (!skipPush && PAGE_ROUTES[page] && page !== 'product') {
     history.pushState({page}, '', PAGE_ROUTES[page]);
   }
@@ -3016,15 +3016,14 @@ updateAuthUI();
 loadProductsFromServer();
 handlePaymentRedirect();
 
-// Route to correct page based on current URL
+// Route to correct page based on current URL path
 (function initialRoute() {
-  // Support old hash-based admin link
   if (location.hash === '#admin') { navigate('admin', true); return; }
   const page = pageFromPath(location.pathname);
   navigate(page, true);
 })();
 
-// Keep hash admin shortcut working
+// Keep #admin shortcut working
 window.addEventListener('hashchange', () => {
   if (location.hash === '#admin') navigate('admin');
 });
