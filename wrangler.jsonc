@@ -1,9 +1,14 @@
 {
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "digitalitemsltd",
   "compatibility_date": "2026-06-14",
-  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
   "assets": {
-    "directory": ".",
-    "not_found_handling": "single-page-application"
-  }
+    "directory": "."
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
 }
