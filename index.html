@@ -6,7 +6,7 @@
   <meta name="referrer" content="no-referrer" />
 
   <!-- SEO -->
-  <title>DigitalItems.Store – Buy Social Media Accounts & Digital Services </title>
+  <title>DigitalItems.Store – Buy Social Media Accounts & Digital Services</title>
   <meta name="description" content="Buy aged Twitter accounts, Reddit accounts with karma, and Reddit marketing services. Trusted by thousands. DIGITALITEMS LTD, London UK." />
   <meta name="keywords" content="buy twitter accounts, aged twitter accounts, buy reddit accounts, reddit accounts with karma, reddit marketing service, buy social media accounts, old twitter accounts, buy aged accounts" />
   <meta name="robots" content="index, follow" />
@@ -1848,10 +1848,11 @@
     <div class="admin-layout">
       <div class="admin-sidebar">
         <h3>Menu</h3>
-        <div class="admin-nav-item active" onclick="adminTab('orders')">📦 Orders</div>
-        <div class="admin-nav-item" onclick="adminTab('products')">🛍 Products</div>
-        <div class="admin-nav-item" onclick="adminTab('users')">👥 Users</div>
-        <div class="admin-nav-item" onclick="adminTab('settings')">⚙️ Settings</div>
+        <div class="admin-nav-item active" onclick="adminTab('orders',event)">📦 Orders</div>
+        <div class="admin-nav-item" onclick="adminTab('products',event)">🛍 Products</div>
+        <div class="admin-nav-item" onclick="adminTab('pages',event)">📄 Pages</div>
+        <div class="admin-nav-item" onclick="adminTab('users',event)">👥 Users</div>
+        <div class="admin-nav-item" onclick="adminTab('settings',event)">⚙️ Settings</div>
         <div style="margin-top:auto;padding-top:24px">
           <div class="admin-nav-item" onclick="adminLogout()" style="color:var(--accent2)">🚪 Logout</div>
         </div>
@@ -1879,8 +1880,8 @@
             </div>
           </div>
           <div class="admin-table">
-            <div class="admin-table-head orders-grid">
-              <span>Order ID</span><span>Customer</span><span>Items</span><span>Total</span><span>Status</span>
+            <div class="admin-table-head" style="grid-template-columns:90px 1fr 130px 70px 110px 40px">
+              <span>ID</span><span>Customer</span><span>Items</span><span>Total</span><span>Status</span><span></span>
             </div>
             <div id="admin-orders-list"></div>
           </div>
@@ -1897,6 +1898,20 @@
               <span>Name</span><span>Category</span><span>Price</span><span>Actions</span>
             </div>
             <div id="admin-products-list"></div>
+          </div>
+        </div>
+
+        <!-- Pages Tab -->
+        <div id="admin-pages-tab" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+            <div class="admin-title" style="margin:0">Pages</div>
+            <button class="btn btn-primary" onclick="openAddPage()">+ New Page</button>
+          </div>
+          <div class="admin-table">
+            <div class="admin-table-head" style="grid-template-columns:1fr 140px 120px">
+              <span>Page</span><span>URL</span><span>Actions</span>
+            </div>
+            <div id="admin-pages-list"></div>
           </div>
         </div>
 
@@ -1958,12 +1973,12 @@
   </div>
 </div>
 
-<!-- ADD PRODUCT MODAL -->
+<!-- ADD/EDIT PRODUCT MODAL -->
 <div class="modal-overlay" id="product-modal">
   <div class="modal">
     <h2 id="modal-title">Add Product</h2>
     <div class="form-group">
-      <label>Product Name</label>
+      <label>Product Name (title)</label>
       <input type="text" id="prod-name" placeholder="Twitter accounts 2010 aged" />
     </div>
     <div class="form-group">
@@ -1979,12 +1994,65 @@
       <input type="number" id="prod-price" placeholder="10.00" step="0.01" />
     </div>
     <div class="form-group">
-      <label>Description</label>
-      <input type="text" id="prod-desc" placeholder="Created: 2010 | Aged account" />
+      <label>Short Spec (shown on listing, use · to separate)</label>
+      <input type="text" id="prod-desc" placeholder="Karma: 100+ · Created: 2020" />
+    </div>
+    <div class="form-group">
+      <label>Full Description (shown on product page, HTML allowed)</label>
+      <textarea id="prod-fulldesc" rows="4" placeholder="<p>Detailed description...</p>" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Image URL (optional)</label>
+      <input type="text" id="prod-image" placeholder="https://... or leave blank for default icon" />
+    </div>
+    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">SEO Settings</div>
+      <div class="form-group">
+        <label>Meta Title</label>
+        <input type="text" id="prod-metatitle" placeholder="Buy Twitter Accounts 2010 – DigitalItems.Store" />
+      </div>
+      <div class="form-group">
+        <label>Meta Description</label>
+        <input type="text" id="prod-metadesc" placeholder="Buy aged 2010 Twitter account..." />
+      </div>
     </div>
     <div style="display:flex;gap:12px;margin-top:8px">
       <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE EDITOR MODAL -->
+<div class="modal-overlay" id="page-modal">
+  <div class="modal">
+    <h2 id="page-modal-title">Edit Page</h2>
+    <div class="form-group">
+      <label>Page Title (H1)</label>
+      <input type="text" id="page-title" placeholder="About Us" />
+    </div>
+    <div class="form-group">
+      <label>URL Slug</label>
+      <input type="text" id="page-slug" placeholder="about" />
+    </div>
+    <div class="form-group">
+      <label>Content (HTML allowed)</label>
+      <textarea id="page-content" rows="10" placeholder="<p>Page content...</p>" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
+    </div>
+    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">SEO</div>
+      <div class="form-group">
+        <label>Meta Title</label>
+        <input type="text" id="page-metatitle" placeholder="About Us – DigitalItems.Store" />
+      </div>
+      <div class="form-group">
+        <label>Meta Description</label>
+        <input type="text" id="page-metadesc" placeholder="Learn about DigitalItems LTD..." />
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:8px">
+      <button class="btn btn-primary" onclick="savePage()">Save Page</button>
+      <button class="btn btn-ghost" onclick="closePageModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -2362,8 +2430,13 @@ function openProduct(id) {
     if (['home','twitter','reddit','marketing'].includes(pid)) lastCategoryPage = pid;
   }
 
-  const img = CATEGORY_IMG[p.category] || CATEGORY_IMG.twitter;
-  const desc = CATEGORY_DESC[p.category] || '';
+  const img = p.image || CATEGORY_IMG[p.category] || CATEGORY_IMG.twitter;
+  const desc = p.fullDesc || CATEGORY_DESC[p.category] || '';
+  // Update SEO meta for this product
+  if (p.metaTitle) document.title = p.metaTitle;
+  else document.title = 'Buy ' + p.name + ' – DigitalItems.Store';
+  const metaEl = document.querySelector('meta[name="description"]');
+  if (metaEl && p.metaDesc) metaEl.setAttribute('content', p.metaDesc);
 
   // Parse spec from desc string (e.g. "Karma: 100+ · Created: 2020")
   const specRows = p.desc.split('·').map(s => s.trim()).filter(Boolean).map(s => {
@@ -2653,6 +2726,26 @@ async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass = document.getElementById('login-pass').value;
   if (!email || !pass) { showToast('Please fill all fields'); return; }
+  // First check if this is an admin login
+  try {
+    const adminRes = await fetch(WORKER_URL + '/verify-admin', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, password: pass })
+    });
+    const adminData = await adminRes.json();
+    if (adminData.isAdmin) {
+      adminPassword = pass;
+      adminLoggedIn = true;
+      navigate('admin');
+      document.getElementById('admin-login-screen').style.display = 'none';
+      document.getElementById('admin-dashboard').style.display = 'block';
+      renderAdminOrders(null);
+      showToast('Welcome, admin');
+      return;
+    }
+  } catch(e) {}
+  // Normal user login
   try {
     const res = await fetch(WORKER_URL + '/login', {
       method: 'POST',
@@ -2775,15 +2868,17 @@ function adminLogout() {
   navigate('home');
 }
 
-function adminTab(tab) {
-  ['orders','products','users','settings'].forEach(t => {
+function adminTab(tab, evt) {
+  ['orders','products','pages','users','settings'].forEach(t => {
     const el = document.getElementById('admin-'+t+'-tab');
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
   document.querySelectorAll('.admin-nav-item').forEach(el => el.classList.remove('active'));
-  event.target.classList.add('active');
+  const clicked = (evt && evt.target) || (typeof event !== 'undefined' && event.target);
+  if (clicked) clicked.classList.add('active');
   if (tab === 'orders') renderAdminOrders(null);
   if (tab === 'products') renderAdminProducts();
+  if (tab === 'pages') renderAdminPages();
   if (tab === 'users') renderAdminUsers();
 }
 
@@ -2810,24 +2905,48 @@ async function renderAdminOrders(ordersData) {
     return;
   }
   el.innerHTML = adminOrders.map(o => `
-    <div class="admin-table-row orders-grid">
+    <div class="admin-table-row" style="grid-template-columns:90px 1fr 130px 70px 110px 40px">
       <span style="font-size:11px;color:var(--muted)">${o.id}</span>
-      <span>${o.email}<br><span style="font-size:11px;color:var(--muted)">${o.name||''}</span></span>
+      <span>${o.email}<br><span style="font-size:11px;color:var(--muted)">${o.name||''}${o.telegram?' · '+o.telegram:''}</span></span>
       <span style="font-size:12px;color:var(--muted)">${(o.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</span>
       <span style="color:var(--accent1);font-weight:600">$${o.total.toFixed(2)}</span>
-      <span class="status-badge status-${o.status}">${o.status}</span>
+      <select onchange="adminUpdateOrderStatus('${o.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;cursor:pointer">
+        <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
+        <option value="paid" ${o.status==='paid'?'selected':''}>Paid</option>
+        <option value="failed" ${o.status==='failed'?'selected':''}>Failed</option>
+        <option value="delivered" ${o.status==='delivered'?'selected':''}>Delivered</option>
+      </select>
+      <button onclick="adminDeleteOrder('${o.id}')" title="Delete" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:13px">🗑</button>
     </div>
   `).join('');
 }
 
-function updateOrderStatus(id, status) {
-  const order = orders.find(o => o.id === id);
-  if (order) {
-    order.status = status;
-    localStorage.setItem('di_orders', JSON.stringify(orders));
-    renderAdminOrders();
+async function adminUpdateOrderStatus(id, status) {
+  try {
+    await fetch(WORKER_URL + '/update-order', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ orderId: id, status })
+    });
+    const o = adminOrders.find(x => x.id === id);
+    if (o) o.status = status;
     showToast('Order status updated');
-  }
+    renderAdminOrders(adminOrders);
+  } catch(e) { showToast('Could not update'); }
+}
+
+async function adminDeleteOrder(id) {
+  if (!confirm('Delete order ' + id + '? This cannot be undone.')) return;
+  try {
+    await fetch(WORKER_URL + '/delete-order', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ orderId: id })
+    });
+    adminOrders = adminOrders.filter(o => o.id !== id);
+    showToast('Order deleted');
+    renderAdminOrders(adminOrders);
+  } catch(e) { showToast('Could not delete'); }
 }
 
 function renderAdminProducts() {
@@ -2876,6 +2995,10 @@ function openAddProduct() {
   document.getElementById('prod-name').value = '';
   document.getElementById('prod-price').value = '';
   document.getElementById('prod-desc').value = '';
+  document.getElementById('prod-fulldesc').value = '';
+  document.getElementById('prod-image').value = '';
+  document.getElementById('prod-metatitle').value = '';
+  document.getElementById('prod-metadesc').value = '';
   document.getElementById('product-modal').classList.add('open');
 }
 
@@ -2888,6 +3011,10 @@ function editProduct(id) {
   document.getElementById('prod-price').value = p.price;
   document.getElementById('prod-desc').value = p.desc;
   document.getElementById('prod-cat').value = p.category;
+  document.getElementById('prod-fulldesc').value = p.fullDesc || '';
+  document.getElementById('prod-image').value = p.image || '';
+  document.getElementById('prod-metatitle').value = p.metaTitle || '';
+  document.getElementById('prod-metadesc').value = p.metaDesc || '';
   document.getElementById('product-modal').classList.add('open');
 }
 
@@ -2897,11 +3024,15 @@ async function saveProduct() {
   const desc = document.getElementById('prod-desc').value.trim();
   const category = document.getElementById('prod-cat').value;
   if (!name || !price) { showToast('Please fill all fields'); return; }
+  const fullDesc = document.getElementById('prod-fulldesc').value.trim();
+  const image = document.getElementById('prod-image').value.trim();
+  const metaTitle = document.getElementById('prod-metatitle').value.trim();
+  const metaDesc = document.getElementById('prod-metadesc').value.trim();
   if (editingProductId) {
     const idx = allProducts.findIndex(p => p.id === editingProductId);
-    if (idx > -1) allProducts[idx] = {...allProducts[idx], name, price, desc, category};
+    if (idx > -1) allProducts[idx] = {...allProducts[idx], name, price, desc, category, fullDesc, image, metaTitle, metaDesc};
   } else {
-    allProducts.push({id:'p'+Date.now(), name, price, desc, category});
+    allProducts.push({id:'p'+Date.now(), name, price, desc, category, fullDesc, image, metaTitle, metaDesc});
   }
   localStorage.setItem('di_products', JSON.stringify(allProducts));
   // Sync to Worker so all visitors see it
@@ -2940,6 +3071,175 @@ function saveSettings() {
   if (workerUrl) localStorage.setItem('di_worker_url', workerUrl);
   if (newPass) localStorage.setItem('di_admin_pass', newPass);
   showToast('Settings saved!');
+}
+
+// ════════════════════════════════════════
+// ADMIN PAGES MANAGEMENT
+// ════════════════════════════════════════
+let customPages = JSON.parse(localStorage.getItem('di_pages') || 'null') || {};
+let editingPageSlug = null;
+
+// Built-in pages that can be edited
+const BUILTIN_PAGES = {
+  about: { title: 'About Us', slug: 'about' },
+  terms: { title: 'Terms of Service', slug: 'terms' },
+  refund: { title: 'Refund Policy', slug: 'refund-policy' },
+  privacy: { title: 'Privacy Policy', slug: 'privacy-policy' },
+  contact: { title: 'Contact Us', slug: 'contact' }
+};
+
+async function renderAdminPages() {
+  const el = document.getElementById('admin-pages-list');
+  // Combine built-in and custom pages
+  let rows = '';
+  for (const [key, p] of Object.entries(BUILTIN_PAGES)) {
+    rows += `
+      <div class="admin-table-row" style="grid-template-columns:1fr 140px 120px">
+        <span>${p.title} <span style="font-size:11px;color:var(--muted)">(built-in)</span></span>
+        <span style="color:var(--muted);font-size:12px">/${p.slug}</span>
+        <button onclick="editBuiltinPage('${key}')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px">Edit</button>
+      </div>`;
+  }
+  for (const [slug, p] of Object.entries(customPages)) {
+    if (BUILTIN_PAGES[slug]) continue;
+    rows += `
+      <div class="admin-table-row" style="grid-template-columns:1fr 140px 120px">
+        <span>${p.title}</span>
+        <span style="color:var(--muted);font-size:12px">/${p.slug}</span>
+        <div style="display:flex;gap:6px">
+          <button onclick="editCustomPage('${slug}')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">Edit</button>
+          <button onclick="deletePage('${slug}')" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">Del</button>
+        </div>
+      </div>`;
+  }
+  el.innerHTML = rows;
+}
+
+function openAddPage() {
+  editingPageSlug = null;
+  document.getElementById('page-modal-title').textContent = 'New Page';
+  document.getElementById('page-title').value = '';
+  document.getElementById('page-slug').value = '';
+  document.getElementById('page-content').value = '';
+  document.getElementById('page-metatitle').value = '';
+  document.getElementById('page-metadesc').value = '';
+  document.getElementById('page-slug').disabled = false;
+  document.getElementById('page-modal').classList.add('open');
+}
+
+function editBuiltinPage(key) {
+  const p = BUILTIN_PAGES[key];
+  editingPageSlug = key;
+  // Read current content from the live page element
+  const pageEl = document.getElementById('page-' + key);
+  const existing = customPages[key];
+  document.getElementById('page-modal-title').textContent = 'Edit ' + p.title;
+  document.getElementById('page-title').value = existing ? existing.title : p.title;
+  document.getElementById('page-slug').value = p.slug;
+  document.getElementById('page-slug').disabled = true;
+  document.getElementById('page-content').value = existing ? existing.content : getBuiltinPageContent(key);
+  document.getElementById('page-metatitle').value = existing ? (existing.metaTitle||'') : (PAGE_TITLES[key]||'');
+  document.getElementById('page-metadesc').value = existing ? (existing.metaDesc||'') : (PAGE_DESC[key]||'');
+  document.getElementById('page-modal').classList.add('open');
+}
+
+function getBuiltinPageContent(key) {
+  const pageEl = document.getElementById('page-' + key);
+  if (!pageEl) return '';
+  const sp = pageEl.querySelector('.static-page');
+  if (!sp) return '';
+  // Get everything after the h1 and .updated
+  const clone = sp.cloneNode(true);
+  const h1 = clone.querySelector('h1'); if (h1) h1.remove();
+  const upd = clone.querySelector('.updated'); if (upd) upd.remove();
+  return clone.innerHTML.trim();
+}
+
+function editCustomPage(slug) {
+  const p = customPages[slug];
+  editingPageSlug = slug;
+  document.getElementById('page-modal-title').textContent = 'Edit ' + p.title;
+  document.getElementById('page-title').value = p.title;
+  document.getElementById('page-slug').value = p.slug;
+  document.getElementById('page-slug').disabled = false;
+  document.getElementById('page-content').value = p.content;
+  document.getElementById('page-metatitle').value = p.metaTitle || '';
+  document.getElementById('page-metadesc').value = p.metaDesc || '';
+  document.getElementById('page-modal').classList.add('open');
+}
+
+async function savePage() {
+  const title = document.getElementById('page-title').value.trim();
+  const slug = document.getElementById('page-slug').value.trim().replace(/[^a-z0-9-]/gi,'-').toLowerCase();
+  const content = document.getElementById('page-content').value;
+  const metaTitle = document.getElementById('page-metatitle').value.trim();
+  const metaDesc = document.getElementById('page-metadesc').value.trim();
+  if (!title || !slug) { showToast('Title and slug required'); return; }
+  const key = editingPageSlug || slug;
+  customPages[key] = { title, slug, content, metaTitle, metaDesc, custom: !BUILTIN_PAGES[key] };
+  localStorage.setItem('di_pages', JSON.stringify(customPages));
+  // Sync to Worker
+  try {
+    await fetch(WORKER_URL + '/pages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ pages: customPages })
+    });
+  } catch(e) {}
+  applyCustomPages();
+  closePageModal();
+  renderAdminPages();
+  showToast('Page saved!');
+}
+
+async function deletePage(slug) {
+  if (!confirm('Delete this page?')) return;
+  delete customPages[slug];
+  localStorage.setItem('di_pages', JSON.stringify(customPages));
+  try {
+    await fetch(WORKER_URL + '/pages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ pages: customPages })
+    });
+  } catch(e) {}
+  renderAdminPages();
+  showToast('Page deleted');
+}
+
+function closePageModal() {
+  document.getElementById('page-modal').classList.remove('open');
+}
+
+// Apply edited content to built-in page elements
+function applyCustomPages() {
+  for (const [key, p] of Object.entries(customPages)) {
+    if (BUILTIN_PAGES[key]) {
+      const pageEl = document.getElementById('page-' + key);
+      if (pageEl) {
+        const sp = pageEl.querySelector('.static-page');
+        if (sp) {
+          const h1 = sp.querySelector('h1');
+          const h1text = h1 ? h1.outerHTML : '<h1>' + p.title + '</h1>';
+          const upd = sp.querySelector('.updated');
+          const updtext = upd ? upd.outerHTML : '';
+          sp.innerHTML = h1text + updtext + p.content;
+        }
+      }
+    }
+  }
+}
+
+async function loadPagesFromServer() {
+  try {
+    const res = await fetch(WORKER_URL + '/pages');
+    const data = await res.json();
+    if (data.pages) {
+      customPages = data.pages;
+      localStorage.setItem('di_pages', JSON.stringify(customPages));
+      applyCustomPages();
+    }
+  } catch(e) {}
 }
 
 // ════════════════════════════════════════
@@ -3014,6 +3314,7 @@ function handlePaymentRedirect() {
 updateCartUI();
 updateAuthUI();
 loadProductsFromServer();
+loadPagesFromServer();
 handlePaymentRedirect();
 
 // Route to correct page based on current URL path
