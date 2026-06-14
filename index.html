@@ -2165,7 +2165,55 @@ const WORKER_URL = localStorage.getItem('di_worker_url') || 'https://digitalitem
 // ════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════
-function navigate(page) {
+const PAGE_ROUTES = {
+  home: '/',
+  twitter: '/twitter-accounts',
+  reddit: '/reddit-accounts',
+  marketing: '/reddit-marketing',
+  checkout: '/checkout',
+  login: '/login',
+  register: '/register',
+  account: '/account',
+  about: '/about',
+  terms: '/terms',
+  refund: '/refund-policy',
+  privacy: '/privacy-policy',
+  contact: '/contact',
+  product: '/product',
+  admin: '/admin'
+};
+
+const PAGE_TITLES = {
+  home: 'DigitalItems.Store – Buy Social Media Accounts & Digital Services',
+  twitter: 'Buy Aged Twitter Accounts – DigitalItems.Store',
+  reddit: 'Buy Reddit Accounts with Karma – DigitalItems.Store',
+  marketing: 'Reddit Marketing Services – DigitalItems.Store',
+  checkout: 'Checkout – DigitalItems.Store',
+  login: 'Login – DigitalItems.Store',
+  register: 'Create Account – DigitalItems.Store',
+  account: 'My Account – DigitalItems.Store',
+  about: 'About Us – DigitalItems.Store',
+  terms: 'Terms of Service – DigitalItems.Store',
+  refund: 'Refund Policy – DigitalItems.Store',
+  privacy: 'Privacy Policy – DigitalItems.Store',
+  contact: 'Contact Us – DigitalItems.Store',
+  product: 'Product – DigitalItems.Store',
+  admin: 'Admin – DigitalItems.Store'
+};
+
+const PAGE_DESC = {
+  home: 'Buy aged Twitter accounts, Reddit accounts with karma, and Reddit marketing services. Trusted by thousands. DIGITALITEMS LTD, London UK.',
+  twitter: 'Buy aged & verified Twitter accounts from 2007-2024. Old Twitter handles with followers. Instant credibility for your brand. Secure checkout.',
+  reddit: 'Buy Reddit accounts with karma, aged 2020-2026. High-karma accounts from 50 to 3000+ karma. Verified and ready to use.',
+  marketing: 'Professional Reddit marketing services. Guaranteed Top 10 Hot section placement and subreddit promotion to boost your brand awareness.',
+  about: 'DIGITALITEMS LTD is a UK-registered company providing premium social media accounts and digital marketing services worldwide.',
+  contact: 'Contact DigitalItems.Store for questions about orders, products, or support. Reach us by email, WhatsApp, or Telegram.',
+  refund: 'DigitalItems.Store refund and returns policy for digital products and social media accounts.',
+  terms: 'Terms of Service for DigitalItems.Store. Read our policies on purchases, delivery, and acceptable use.',
+  privacy: 'Privacy Policy for DigitalItems.Store. Learn how we collect, use, and protect your personal information.'
+};
+
+function navigate(page, skipPush) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
   const el = document.getElementById('page-' + page);
@@ -2173,6 +2221,19 @@ function navigate(page) {
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
   window.scrollTo(0, 0);
+
+  // Update URL + title
+  if (!skipPush && PAGE_ROUTES[page] && page !== 'product') {
+    history.pushState({page}, '', PAGE_ROUTES[page]);
+  }
+  if (PAGE_TITLES[page]) document.title = PAGE_TITLES[page];
+  if (PAGE_DESC[page]) {
+    let m = document.querySelector('meta[name="description"]');
+    if (m) m.setAttribute('content', PAGE_DESC[page]);
+  }
+  // Update canonical
+  let canon = document.querySelector('link[rel="canonical"]');
+  if (canon && PAGE_ROUTES[page]) canon.setAttribute('href', 'https://digitalitems.store' + PAGE_ROUTES[page]);
 
   if (page === 'account' && !currentUser) { navigate('login'); return; }
   if (page === 'account') renderAccount();
@@ -2184,6 +2245,19 @@ function navigate(page) {
   if (page === 'contact') { }
   if (page === 'admin') { if (!adminLoggedIn) { } }
 }
+
+// Map URL path back to a page on load / back-button
+function pageFromPath(path) {
+  for (const [page, route] of Object.entries(PAGE_ROUTES)) {
+    if (route === path) return page;
+  }
+  return 'home';
+}
+
+window.addEventListener('popstate', (e) => {
+  const page = (e.state && e.state.page) || pageFromPath(location.pathname);
+  navigate(page, true);
+});
 
 // ════════════════════════════════════════
 // RENDER PRODUCTS
@@ -2939,15 +3013,21 @@ function handlePaymentRedirect() {
 
 updateCartUI();
 updateAuthUI();
-renderFeatured();
 loadProductsFromServer();
 handlePaymentRedirect();
 
-// Secret admin route: navigate to /admin via URL hash
+// Route to correct page based on current URL
+(function initialRoute() {
+  // Support old hash-based admin link
+  if (location.hash === '#admin') { navigate('admin', true); return; }
+  const page = pageFromPath(location.pathname);
+  navigate(page, true);
+})();
+
+// Keep hash admin shortcut working
 window.addEventListener('hashchange', () => {
   if (location.hash === '#admin') navigate('admin');
 });
-if (location.hash === '#admin') navigate('admin');
 </script>
 </body>
 </html>
