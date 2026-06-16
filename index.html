@@ -1003,6 +1003,8 @@
     .status-paid { background: #16a34a20; color: #4ade80; border: 1px solid #16a34a40; }
     .status-pending { background: #ca8a0420; color: #fbbf24; border: 1px solid #ca8a0440; }
     .status-failed { background: #dc262620; color: #f87171; border: 1px solid #dc262640; }
+    .status-partial { background: #ea580c20; color: #fb923c; border: 1px solid #ea580c40; }
+    .status-delivered { background: #2563eb20; color: #60a5fa; border: 1px solid #2563eb40; }
 
     /* ── ADMIN PANEL ── */
     .admin-layout {
@@ -3340,13 +3342,14 @@ async function renderAdminOrders(ordersData) {
   }
   el.innerHTML = adminOrders.map(o => `
     <div class="admin-table-row" style="grid-template-columns:90px 1fr 130px 70px 110px 40px">
-      <span style="font-size:11px;color:var(--muted)">${o.id}</span>
-      <span>${o.email}<br><span style="font-size:11px;color:var(--muted)">${o.name||''}${o.telegram?' · '+o.telegram:''}</span></span>
+      <span style="font-size:11px;color:var(--muted)">${o.id}${o.method==='crypto'?'<br><span style="color:#fb923c">₿ crypto</span>':''}</span>
+      <span>${o.email}<br><span style="font-size:11px;color:var(--muted)">${o.name||''}${o.telegram?' · '+o.telegram:''}</span>${o.note?'<br><span style="font-size:11px;color:#fb923c">⚠ '+o.note+'</span>':''}</span>
       <span style="font-size:12px;color:var(--muted)">${(o.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</span>
       <span style="color:var(--accent1);font-weight:600">$${o.total.toFixed(2)}</span>
       <select onchange="adminUpdateOrderStatus('${o.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;cursor:pointer">
         <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
         <option value="paid" ${o.status==='paid'?'selected':''}>Paid</option>
+        <option value="partial" ${o.status==='partial'?'selected':''}>Partial</option>
         <option value="failed" ${o.status==='failed'?'selected':''}>Failed</option>
         <option value="delivered" ${o.status==='delivered'?'selected':''}>Delivered</option>
       </select>
