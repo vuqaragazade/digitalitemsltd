@@ -2021,7 +2021,18 @@
         <button class="btn btn-ghost" onclick="uploadProductImage()" style="padding:6px 14px;font-size:13px">Upload</button>
         <span id="prod-image-status" style="font-size:12px;color:var(--muted)"></span>
       </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--text);cursor:pointer;text-transform:none">
+        <input type="checkbox" id="prod-image-applyall" style="width:auto;cursor:pointer" />
+        Apply this image to ALL products in the same category
+      </label>
       <div id="prod-image-preview" style="margin-top:8px"></div>
+    </div>
+    <div class="form-group">
+      <label>Page URL (slug)</label>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="color:var(--muted);font-size:13px">/products/</span>
+        <input type="text" id="prod-slug" placeholder="twitter-accounts-2010" style="flex:1" />
+      </div>
     </div>
     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
       <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">SEO Settings</div>
@@ -2243,6 +2254,11 @@ let currentUser = JSON.parse(localStorage.getItem('di_user') || 'null');
 let orders = JSON.parse(localStorage.getItem('di_orders') || '[]');
 let users = JSON.parse(localStorage.getItem('di_users') || '[]');
 let allProducts = JSON.parse(localStorage.getItem('di_products') || 'null') || PRODUCTS;
+// Backfill slugs for products that don't have one
+allProducts.forEach(p => { if (!p.slug) p.slug = slugifyInit(p.name); });
+function slugifyInit(text) {
+  return (text || '').toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+}
 let adminLoggedIn = false;
 const ADMIN_PASS = 'admin2025di';
 // Worker URL — set this after deploying Cloudflare Worker
@@ -2334,7 +2350,12 @@ function navigate(page, skipPush) {
 
 // Map URL path back to a page on load / back-button
 function pageFromPath(path) {
-  // Product URLs: /product/ID
+  // Product URLs: /products/slug (or legacy /product/ID)
+  if (path.startsWith('/products/')) {
+    const slug = path.replace('/products/', '');
+    const prod = allProducts.find(p => (p.slug || slugify(p.name)) === slug);
+    return { page: 'product', productId: prod ? prod.id : null, slug };
+  }
   if (path.startsWith('/product/')) {
     return { page: 'product', productId: path.replace('/product/', '') };
   }
@@ -2352,7 +2373,8 @@ function pageFromPath(path) {
 window.addEventListener('popstate', (e) => {
   const result = pageFromPath(location.pathname);
   if (typeof result === 'object' && result.page === 'product') {
-    openProduct(result.productId, true);
+    if (result.productId) openProduct(result.productId, true);
+    else navigate('home', true);
   } else if (typeof result === 'object' && result.page === 'custom') {
     navigate('home', true);
   } else {
@@ -2501,7 +2523,8 @@ function openProduct(id, skipPush) {
   navigate('product', true);
   // Push a real URL for this product (for refresh + sharing + SEO)
   if (!skipPush) {
-    history.pushState({page:'product', productId: id}, '', '/product/' + id);
+    const slug = p.slug || slugify(p.name);
+    history.pushState({page:'product', productId: id, slug}, '', '/products/' + slug);
   }
 }
 
@@ -3026,6 +3049,14 @@ async function renderAdminUsers() {
 
 let editingProductId = null;
 
+function slugify(text) {
+  return (text || '').toLowerCase().trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 function openAddProduct() {
   editingProductId = null;
   document.getElementById('modal-title').textContent = 'Add Product';
@@ -3037,6 +3068,8 @@ function openAddProduct() {
   document.getElementById('prod-image-preview').innerHTML = '';
   document.getElementById('prod-image-status').textContent = '';
   document.getElementById('prod-image-file').value = '';
+  document.getElementById('prod-slug').value = '';
+  const applyAll = document.getElementById('prod-image-applyall'); if (applyAll) applyAll.checked = false;
   document.getElementById('prod-metatitle').value = '';
   document.getElementById('prod-metadesc').value = '';
   document.getElementById('product-modal').classList.add('open');
@@ -3056,6 +3089,8 @@ function editProduct(id) {
   document.getElementById('prod-image-preview').innerHTML = p.image ? '<img src="'+p.image+'" style="max-width:100px;border-radius:8px;border:1px solid var(--border)" />' : '';
   document.getElementById('prod-image-status').textContent = '';
   document.getElementById('prod-image-file').value = '';
+  document.getElementById('prod-slug').value = p.slug || slugify(p.name);
+  const applyAllEdit = document.getElementById('prod-image-applyall'); if (applyAllEdit) applyAllEdit.checked = false;
   document.getElementById('prod-metatitle').value = p.metaTitle || '';
   document.getElementById('prod-metadesc').value = p.metaDesc || '';
   document.getElementById('product-modal').classList.add('open');
@@ -3099,11 +3134,27 @@ async function saveProduct() {
   const image = document.getElementById('prod-image').value.trim();
   const metaTitle = document.getElementById('prod-metatitle').value.trim();
   const metaDesc = document.getElementById('prod-metadesc').value.trim();
+  let slug = document.getElementById('prod-slug').value.trim();
+  if (!slug) slug = slugify(name);
+  else slug = slugify(slug);
+  // Ensure slug is unique (append number if needed)
+  let baseSlug = slug, n = 2;
+  while (allProducts.some(p => p.slug === slug && p.id !== editingProductId)) {
+    slug = baseSlug + '-' + n; n++;
+  }
+  const applyAll = document.getElementById('prod-image-applyall').checked;
   if (editingProductId) {
     const idx = allProducts.findIndex(p => p.id === editingProductId);
-    if (idx > -1) allProducts[idx] = {...allProducts[idx], name, price, desc, category, fullDesc, image, metaTitle, metaDesc};
+    if (idx > -1) allProducts[idx] = {...allProducts[idx], name, price, desc, category, fullDesc, image, metaTitle, metaDesc, slug};
   } else {
-    allProducts.push({id:'p'+Date.now(), name, price, desc, category, fullDesc, image, metaTitle, metaDesc});
+    allProducts.push({id:'p'+Date.now(), name, price, desc, category, fullDesc, image, metaTitle, metaDesc, slug});
+  }
+  // Apply image to all products in the same category if checkbox is checked
+  if (applyAll && image) {
+    allProducts.forEach(p => {
+      if (p.category === category) p.image = image;
+    });
+    showToast('Image applied to all ' + category + ' products');
   }
   localStorage.setItem('di_products', JSON.stringify(allProducts));
   // Sync to Worker so all visitors see it
@@ -3391,11 +3442,18 @@ handlePaymentRedirect();
 // Route to correct page based on current URL path
 (function initialRoute() {
   if (location.hash === '#admin') { navigate('admin', true); return; }
-  const result = pageFromPath(location.pathname);
-  if (typeof result === 'object' && result.page === 'product') {
-    // Wait for products to load, then open
-    setTimeout(() => openProduct(result.productId, true), 600);
-  } else if (typeof result === 'object' && result.page === 'custom') {
+  const path = location.pathname;
+  if (path.startsWith('/products/') || path.startsWith('/product/')) {
+    // Wait for products to load, then resolve slug/id
+    setTimeout(() => {
+      const result = pageFromPath(path);
+      if (result.productId) openProduct(result.productId, true);
+      else navigate('home', true);
+    }, 700);
+    return;
+  }
+  const result = pageFromPath(path);
+  if (typeof result === 'object' && result.page === 'custom') {
     navigate('home', true);
   } else {
     navigate(result, true);
