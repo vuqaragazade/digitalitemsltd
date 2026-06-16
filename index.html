@@ -2635,7 +2635,17 @@ function goCheckout() {
 // CHECKOUT
 // ════════════════════════════════════════
 function renderCheckout() {
+  // If checkout layout was replaced by waiting/success panel, restore it
+  if (!document.getElementById('order-summary')) {
+    restoreCheckoutPage();
+  }
+  // If a payment is mid-flight, show waiting panel instead
+  if (currentPollOrderId) {
+    showWaitingPanel(currentPollOrderId);
+    return;
+  }
   const el = document.getElementById('order-summary');
+  if (!el) return;
   el.innerHTML = cart.map(item => `
     <div class="order-item">
       <span class="item-name">${item.name} × ${item.qty}</span>
@@ -2646,10 +2656,16 @@ function renderCheckout() {
 }
 
 let pollTimer = null;
+let currentPollOrderId = null;
 function pollOrderStatus(orderId, btn) {
   let attempts = 0;
   const maxAttempts = 120; // ~10 minutes (every 5s)
+  currentPollOrderId = orderId;
   clearInterval(pollTimer);
+
+  // Show a waiting panel with manual options (instead of a frozen button)
+  showWaitingPanel(orderId);
+
   pollTimer = setInterval(async () => {
     attempts++;
     try {
@@ -2657,28 +2673,106 @@ function pollOrderStatus(orderId, btn) {
       const data = await res.json();
       if (data.status === 'paid') {
         clearInterval(pollTimer);
-        if (btn) { btn.innerHTML = '✓ Payment confirmed!'; }
+        currentPollOrderId = null;
         showPaymentResult('success', orderId);
       }
     } catch(e) {}
     if (attempts >= maxAttempts) {
       clearInterval(pollTimer);
-      if (btn) { btn.innerHTML = '🔒 Pay with Card'; btn.disabled = false; }
     }
   }, 5000);
+}
+
+function showWaitingPanel(orderId) {
+  const layout = document.querySelector('#page-checkout .checkout-layout');
+  if (!layout) return;
+  layout.innerHTML = `
+    <div style="grid-column:1/-1;text-align:center;padding:48px 24px">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;margin:0 auto 24px"><span class="spinner" style="width:24px;height:24px"></span></div>
+      <h1 style="font-family:var(--font-display);font-size:24px;font-weight:700;margin-bottom:12px">Waiting for payment</h1>
+      <p style="color:var(--muted);max-width:440px;margin:0 auto 28px;line-height:1.7">Complete your payment in the tab that just opened. This page will update automatically once your payment is confirmed.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="checkPaymentNow('${orderId}')">I've paid — check now</button>
+        <button class="btn btn-ghost" onclick="cancelWaiting()">I didn't pay / go back</button>
+      </div>
+    </div>`;
+}
+
+async function checkPaymentNow(orderId) {
+  try {
+    const res = await fetch(WORKER_URL + '/order-status?id=' + encodeURIComponent(orderId));
+    const data = await res.json();
+    if (data.status === 'paid') {
+      clearInterval(pollTimer);
+      currentPollOrderId = null;
+      showPaymentResult('success', orderId);
+    } else {
+      showToast('Payment not confirmed yet. Please complete payment first.');
+    }
+  } catch(e) {
+    showToast('Could not check status. Try again.');
+  }
+}
+
+function cancelWaiting() {
+  clearInterval(pollTimer);
+  currentPollOrderId = null;
+  // Restore cart and rebuild the checkout page
+  restoreCheckoutPage();
+  navigate('home');
+  showToast('Payment cancelled. Your cart is saved.');
+}
+
+function restoreCheckoutPage() {
+  const layout = document.querySelector('#page-checkout .checkout-layout');
+  if (!layout) return;
+  layout.innerHTML = `
+    <div>
+      <div class="checkout-box">
+        <h2>Contact Information</h2>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="co-name" placeholder="John Doe" />
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="co-email" placeholder="john@example.com" />
+        </div>
+        <div class="form-group">
+          <label>Telegram (optional)</label>
+          <input type="text" id="co-tg" placeholder="@username" />
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="checkout-box">
+        <h2>Order Summary</h2>
+        <div class="order-summary-items" id="order-summary"></div>
+        <div class="order-total-row">
+          <span class="label">Total</span>
+          <span class="total-amount" id="order-total">$0.00</span>
+        </div>
+        <button class="pay-btn" id="pay-btn" onclick="processPayment()">🔒 Pay with Card</button>
+        <div class="secure-note">🔐 Secure payment · SSL encrypted</div>
+      </div>
+    </div>`;
 }
 
 function showPaymentResult(status, orderId) {
   const layout = document.querySelector('#page-checkout .checkout-layout');
   if (!layout) return;
   if (status === 'success') {
+    // Payment confirmed — now clear the cart
+    cart = []; saveCart(); updateCartUI();
+    // make sure user is on checkout page to see it
+    navigate('checkout', true);
     layout.innerHTML = `
       <div style="grid-column:1/-1;text-align:center;padding:48px 24px">
         <div style="width:72px;height:72px;border-radius:50%;background:#16a34a20;color:#4ade80;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 24px;border:2px solid #16a34a40">✓</div>
         <h1 style="font-family:var(--font-display);font-size:26px;font-weight:700;margin-bottom:12px">Payment Successful</h1>
         <p style="color:var(--muted);max-width:420px;margin:0 auto 24px;line-height:1.7">Thank you for your order! Your payment has been received and your order is being processed. You'll receive your items shortly.</p>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;color:var(--muted);max-width:300px;margin:0 auto 24px">Order: <strong style="color:var(--accent1);font-family:monospace">${orderId}</strong></div>
-        <button class="btn btn-primary" onclick="navigate('home')">Back to Home</button>
+        <button class="btn btn-primary" onclick="restoreCheckoutPage();navigate('home')">Back to Home</button>
       </div>`;
   }
 }
@@ -2759,17 +2853,10 @@ async function processPayment() {
     link.rel = 'noreferrer noopener';
     link.click();
 
-    btn.disabled = false;
-    btn.innerHTML = '⏳ Waiting for payment...';
-
     showToast('Payment page opened in a new tab');
 
-    // Clear cart
-    cart = [];
-    saveCart();
-    updateCartUI();
-
-    // Poll the Worker for payment status (checks if Stripe confirmed)
+    // Poll the Worker for payment status (shows waiting panel)
+    // Cart is kept until payment confirmed (so "go back" preserves it)
     pollOrderStatus(orderId, btn);
 
   } catch(err) {
