@@ -2061,6 +2061,21 @@
             </div>
             <button class="btn btn-primary" onclick="saveAdminProfile()">Save Profile</button>
           </div>
+          <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">Payment Limits</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="form-group">
+                <label>Minimum Order (USD)</label>
+                <input type="number" id="settings-min" placeholder="0" step="0.01" min="0" />
+              </div>
+              <div class="form-group">
+                <label>Maximum Order (USD)</label>
+                <input type="number" id="settings-max" placeholder="0 = no limit" step="0.01" min="0" />
+              </div>
+            </div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Customers won't be able to pay if their cart total is below the minimum or above the maximum. Set to 0 for no limit.</p>
+            <button class="btn btn-primary" onclick="savePaymentLimits()">Save Limits</button>
+          </div>
           <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px">
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">Payment Gateway</h2>
             <div class="form-group">
@@ -2790,6 +2805,28 @@ function renderCheckout() {
     </div>
   `).join('');
   document.getElementById('order-total').textContent = '$' + cartTotal().toFixed(2);
+
+  // Show payment limit warning and disable pay buttons if out of range
+  const limitErr = checkCartLimits();
+  const payBtn = document.getElementById('pay-btn');
+  const cryptoBtn = document.getElementById('pay-crypto-btn');
+  let warnEl = document.getElementById('limit-warning');
+  if (limitErr) {
+    if (!warnEl) {
+      warnEl = document.createElement('div');
+      warnEl.id = 'limit-warning';
+      warnEl.style.cssText = 'background:#ea580c20;border:1px solid #ea580c40;color:#fb923c;border-radius:8px;padding:12px;font-size:13px;margin-bottom:14px;line-height:1.5';
+      const box = el.closest('.checkout-box');
+      if (box) box.insertBefore(warnEl, document.querySelector('.order-total-row'));
+    }
+    warnEl.textContent = '⚠ ' + limitErr;
+    if (payBtn) { payBtn.disabled = true; payBtn.style.opacity = '0.5'; }
+    if (cryptoBtn) { cryptoBtn.disabled = true; cryptoBtn.style.opacity = '0.5'; }
+  } else {
+    if (warnEl) warnEl.remove();
+    if (payBtn) { payBtn.disabled = false; payBtn.style.opacity = '1'; }
+    if (cryptoBtn) { cryptoBtn.disabled = false; cryptoBtn.style.opacity = '1'; }
+  }
 }
 
 let pollTimer = null;
@@ -2920,6 +2957,8 @@ async function processCryptoPayment() {
   const email = document.getElementById('co-email').value.trim();
   if (!name || !email) { showToast('Please fill in your name and email'); return; }
   if (!email.includes('@')) { showToast('Please enter a valid email'); return; }
+  const limitErr = checkCartLimits();
+  if (limitErr) { showToast(limitErr); return; }
 
   const btn = document.getElementById('pay-crypto-btn');
   btn.disabled = true;
@@ -2977,6 +3016,8 @@ async function processPayment() {
   const email = document.getElementById('co-email').value.trim();
   if (!name || !email) { showToast('Please fill in your name and email'); return; }
   if (!email.includes('@')) { showToast('Please enter a valid email'); return; }
+  const limitErr = checkCartLimits();
+  if (limitErr) { showToast(limitErr); return; }
 
   const btn = document.getElementById('pay-btn');
   btn.disabled = true;
@@ -3315,6 +3356,7 @@ function adminTab(tab, evt) {
   if (tab === 'pages') renderAdminPages();
   if (tab === 'users') renderAdminUsers();
   if (tab === 'profile') loadAdminProfile();
+  if (tab === 'settings') loadPaymentLimits();
   if (tab === 'settings') loadAdminProfile();
 }
 
@@ -3608,6 +3650,58 @@ function saveSettings() {
   showToast('Settings saved!');
 }
 
+let paymentLimits = { min: 0, max: 0 };
+
+async function savePaymentLimits() {
+  const min = parseFloat(document.getElementById('settings-min').value) || 0;
+  const max = parseFloat(document.getElementById('settings-max').value) || 0;
+  if (max > 0 && min > 0 && max < min) {
+    showToast('Maximum must be greater than minimum');
+    return;
+  }
+  try {
+    const res = await fetch(WORKER_URL + '/limits', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ limits: { min, max } })
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error); return; }
+    paymentLimits = { min, max };
+    showToast('Payment limits saved!');
+  } catch(e) {
+    showToast('Could not save limits');
+  }
+}
+
+async function loadPaymentLimits() {
+  try {
+    const res = await fetch(WORKER_URL + '/limits');
+    const data = await res.json();
+    if (data.limits) {
+      paymentLimits = data.limits;
+      const minEl = document.getElementById('settings-min');
+      const maxEl = document.getElementById('settings-max');
+      if (minEl) minEl.value = paymentLimits.min || '';
+      if (maxEl) maxEl.value = paymentLimits.max || '';
+    }
+  } catch(e) {}
+}
+
+// Returns error string if cart total is out of allowed range, else null
+function checkCartLimits() {
+  const total = cartTotal();
+  const min = Number(paymentLimits.min) || 0;
+  const max = Number(paymentLimits.max) || 0;
+  if (min > 0 && total < min) {
+    return `Minimum order is $${min.toFixed(2)}. Add $${(min-total).toFixed(2)} more to checkout.`;
+  }
+  if (max > 0 && total > max) {
+    return `Maximum order is $${max.toFixed(2)}. Please reduce your cart or contact us for large orders.`;
+  }
+  return null;
+}
+
 async function loadAdminProfile() {
   try {
     const res = await fetch(WORKER_URL + '/admin-profile', {
@@ -3887,6 +3981,7 @@ updateCartUI();
 updateAuthUI();
 loadProductsFromServer();
 loadPagesFromServer();
+loadPaymentLimits();
 handlePaymentRedirect();
 
 // Route to correct page based on current URL path
