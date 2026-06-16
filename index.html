@@ -424,6 +424,16 @@
     .product-row:last-child { border-bottom: none; }
     .product-row:hover { background: var(--bg3); }
 
+    .product-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--bg3);
+    }
+
     .product-row .name {
       font-weight: 500;
       font-size: 14px;
@@ -2324,15 +2334,30 @@ function navigate(page, skipPush) {
 
 // Map URL path back to a page on load / back-button
 function pageFromPath(path) {
+  // Product URLs: /product/ID
+  if (path.startsWith('/product/')) {
+    return { page: 'product', productId: path.replace('/product/', '') };
+  }
   for (const [page, route] of Object.entries(PAGE_ROUTES)) {
     if (route === path) return page;
+  }
+  // Custom pages
+  const slug = path.replace(/^\//, '');
+  if (customPages && customPages[slug]) {
+    return { page: 'custom', slug };
   }
   return 'home';
 }
 
 window.addEventListener('popstate', (e) => {
-  const page = (e.state && e.state.page) || pageFromPath(location.pathname);
-  navigate(page, true);
+  const result = pageFromPath(location.pathname);
+  if (typeof result === 'object' && result.page === 'product') {
+    openProduct(result.productId, true);
+  } else if (typeof result === 'object' && result.page === 'custom') {
+    navigate('home', true);
+  } else {
+    navigate(result, true);
+  }
 });
 
 // ════════════════════════════════════════
@@ -2427,7 +2452,7 @@ function updateHeroCards(featured) {
 let detailQty = 1;
 let lastCategoryPage = 'home';
 
-function openProduct(id) {
+function openProduct(id, skipPush) {
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
   detailQty = 1;
@@ -2473,7 +2498,11 @@ function openProduct(id) {
       <div class="product-detail-desc">${desc}</div>
     </div>
   `;
-  navigate('product');
+  navigate('product', true);
+  // Push a real URL for this product (for refresh + sharing + SEO)
+  if (!skipPush) {
+    history.pushState({page:'product', productId: id}, '', '/product/' + id);
+  }
 }
 
 function detailQtyChange(d) {
@@ -3362,8 +3391,15 @@ handlePaymentRedirect();
 // Route to correct page based on current URL path
 (function initialRoute() {
   if (location.hash === '#admin') { navigate('admin', true); return; }
-  const page = pageFromPath(location.pathname);
-  navigate(page, true);
+  const result = pageFromPath(location.pathname);
+  if (typeof result === 'object' && result.page === 'product') {
+    // Wait for products to load, then open
+    setTimeout(() => openProduct(result.productId, true), 600);
+  } else if (typeof result === 'object' && result.page === 'custom') {
+    navigate('home', true);
+  } else {
+    navigate(result, true);
+  }
 })();
 
 // Keep #admin shortcut working
