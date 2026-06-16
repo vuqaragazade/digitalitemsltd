@@ -1474,6 +1474,7 @@
     <div class="header-right">
       <button class="btn btn-ghost" onclick="navigate('login')" id="header-login-btn">Login</button>
       <button class="btn btn-ghost" onclick="navigate('account')" id="header-account-btn" style="display:none">Account</button>
+      <button class="btn btn-ghost" onclick="universalLogout()" id="header-logout-btn" style="display:none">Logout</button>
       <button class="cart-btn" onclick="openCart()">🛒 <span class="cart-count" id="cart-count">0</span></button>
       <button class="mobile-menu-btn" onclick="toggleMobileMenu()" id="mobile-menu-btn">☰</button>
     </div>
@@ -1489,7 +1490,8 @@
   <a onclick="navigate('about');closeMobileMenu()">About</a>
   <a onclick="navigate('contact');closeMobileMenu()">Contact</a>
   <a id="mobile-login-link" onclick="navigate('login');closeMobileMenu()">Login</a>
-  <a id="mobile-account-link" onclick="navigate('account');closeMobileMenu()" style="display:none">My Account</a>
+  <a id="mobile-account-link" onclick="mobileAccountClick();closeMobileMenu()" style="display:none">My Account</a>
+  <a id="mobile-logout-link" onclick="universalLogout();closeMobileMenu()" style="display:none">Logout</a>
 </div>
 
 <!-- TOAST -->
@@ -2259,7 +2261,8 @@ allProducts.forEach(p => { if (!p.slug) p.slug = slugifyInit(p.name); });
 function slugifyInit(text) {
   return (text || '').toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
 }
-let adminLoggedIn = false;
+let adminLoggedIn = JSON.parse(localStorage.getItem('di_admin_logged') || 'false');
+let adminPassword = localStorage.getItem('di_admin_pass_session') || '';
 const ADMIN_PASS = 'admin2025di';
 // Worker URL — set this after deploying Cloudflare Worker
 const WORKER_URL = localStorage.getItem('di_worker_url') || 'https://digitalitems-api.agazade-vuqar-1996.workers.dev';
@@ -2345,7 +2348,20 @@ function navigate(page, skipPush) {
   if (page === 'marketing') renderProducts('marketing', 'marketing-list');
   if (page === 'checkout') renderCheckout();
   if (page === 'contact') { }
-  if (page === 'admin') { if (!adminLoggedIn) { } }
+  if (page === 'admin') {
+    if (adminLoggedIn) {
+      const ls = document.getElementById('admin-login-screen');
+      const dash = document.getElementById('admin-dashboard');
+      if (ls) ls.style.display = 'none';
+      if (dash) dash.style.display = 'block';
+      renderAdminOrders(null);
+    } else {
+      const ls = document.getElementById('admin-login-screen');
+      const dash = document.getElementById('admin-dashboard');
+      if (ls) ls.style.display = 'block';
+      if (dash) dash.style.display = 'none';
+    }
+  }
 }
 
 // Map URL path back to a page on load / back-button
@@ -2646,6 +2662,13 @@ function renderCheckout() {
   }
   const el = document.getElementById('order-summary');
   if (!el) return;
+  // Auto-fill contact info from logged-in user profile (editable)
+  if (currentUser) {
+    const nameEl = document.getElementById('co-name');
+    const emailEl = document.getElementById('co-email');
+    if (nameEl && !nameEl.value) nameEl.value = currentUser.name || '';
+    if (emailEl && !emailEl.value) emailEl.value = currentUser.email || '';
+  }
   el.innerHTML = cart.map(item => `
     <div class="order-item">
       <span class="item-name">${item.name} × ${item.qty}</span>
@@ -2884,10 +2907,14 @@ async function doLogin() {
     if (adminData.isAdmin) {
       adminPassword = pass;
       adminLoggedIn = true;
+      localStorage.setItem('di_admin_logged', 'true');
+      localStorage.setItem('di_admin_pass_session', pass);
+      localStorage.setItem('di_admin_email', email);
       navigate('admin');
       document.getElementById('admin-login-screen').style.display = 'none';
       document.getElementById('admin-dashboard').style.display = 'block';
       renderAdminOrders(null);
+      updateAuthUI();
       showToast('Welcome, admin');
       return;
     }
@@ -2943,19 +2970,47 @@ function doLogout() {
 function updateAuthUI() {
   const loginBtn = document.getElementById('header-login-btn');
   const accountBtn = document.getElementById('header-account-btn');
+  const logoutBtn = document.getElementById('header-logout-btn');
   const mLogin = document.getElementById('mobile-login-link');
   const mAccount = document.getElementById('mobile-account-link');
-  if (currentUser) {
+  const mLogout = document.getElementById('mobile-logout-link');
+  const isLoggedIn = currentUser || adminLoggedIn;
+
+  if (isLoggedIn) {
     loginBtn.style.display = 'none';
     accountBtn.style.display = 'flex';
+    if (logoutBtn) logoutBtn.style.display = 'flex';
+    // Admin sees "Dashboard", user sees "Account"
+    accountBtn.textContent = adminLoggedIn ? 'Dashboard' : 'Account';
+    accountBtn.onclick = adminLoggedIn ? () => goAdminDashboard() : () => navigate('account');
     if (mLogin) mLogin.style.display = 'none';
-    if (mAccount) mAccount.style.display = 'block';
+    if (mAccount) { mAccount.style.display = 'block'; mAccount.textContent = adminLoggedIn ? 'Dashboard' : 'My Account'; }
+    if (mLogout) mLogout.style.display = 'block';
   } else {
     loginBtn.style.display = 'flex';
     accountBtn.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = 'none';
     if (mLogin) mLogin.style.display = 'block';
     if (mAccount) mAccount.style.display = 'none';
+    if (mLogout) mLogout.style.display = 'none';
   }
+}
+
+function mobileAccountClick() {
+  if (adminLoggedIn) goAdminDashboard();
+  else navigate('account');
+}
+
+function goAdminDashboard() {
+  navigate('admin');
+  document.getElementById('admin-login-screen').style.display = 'none';
+  document.getElementById('admin-dashboard').style.display = 'block';
+  renderAdminOrders(null);
+}
+
+function universalLogout() {
+  if (adminLoggedIn) { adminLogout(); }
+  else { doLogout(); }
 }
 
 async function renderAccount() {
@@ -2987,7 +3042,6 @@ async function renderAccount() {
 // ════════════════════════════════════════
 // ADMIN
 // ════════════════════════════════════════
-let adminPassword = '';
 async function adminLogin() {
   const pass = document.getElementById('admin-pass-input').value;
   if (!pass) { showToast('Enter password'); return; }
@@ -3000,9 +3054,12 @@ async function adminLogin() {
     const data = await res.json();
     adminPassword = pass;
     adminLoggedIn = true;
+    localStorage.setItem('di_admin_logged', 'true');
+    localStorage.setItem('di_admin_pass_session', pass);
     document.getElementById('admin-login-screen').style.display = 'none';
     document.getElementById('admin-dashboard').style.display = 'block';
     renderAdminOrders(data.orders || []);
+    updateAuthUI();
   } catch(e) {
     showToast('Connection error');
   }
@@ -3010,8 +3067,13 @@ async function adminLogin() {
 
 function adminLogout() {
   adminLoggedIn = false;
+  adminPassword = '';
+  localStorage.removeItem('di_admin_logged');
+  localStorage.removeItem('di_admin_pass_session');
+  localStorage.removeItem('di_admin_email');
   document.getElementById('admin-login-screen').style.display = 'block';
   document.getElementById('admin-dashboard').style.display = 'none';
+  updateAuthUI();
   navigate('home');
 }
 
