@@ -1924,6 +1924,7 @@
       <div class="admin-sidebar">
         <h3>Menu</h3>
         <div class="admin-nav-item active" onclick="adminTab('orders',event)">📦 Orders</div>
+        <div class="admin-nav-item" onclick="adminTab('analytics',event)">📊 Analytics</div>
         <div class="admin-nav-item" onclick="adminTab('products',event)">🛍 Products</div>
         <div class="admin-nav-item" onclick="adminTab('pages',event)">📄 Pages</div>
         <div class="admin-nav-item" onclick="adminTab('users',event)">👥 Users</div>
@@ -1964,6 +1965,56 @@
         </div>
 
         <!-- Products Tab -->
+        <div id="admin-analytics-tab" style="display:none">
+          <div class="admin-title">Analytics</div>
+          <div class="admin-stats" style="margin-bottom:24px">
+            <div class="admin-stat">
+              <div class="label">Total Revenue</div>
+              <div class="value orange" id="an-total-rev">$0</div>
+            </div>
+            <div class="admin-stat">
+              <div class="label">This Month</div>
+              <div class="value green" id="an-month-rev">$0</div>
+            </div>
+            <div class="admin-stat">
+              <div class="label">This Year</div>
+              <div class="value orange" id="an-year-rev">$0</div>
+            </div>
+            <div class="admin-stat">
+              <div class="label">Avg Order Value</div>
+              <div class="value" id="an-aov">$0</div>
+            </div>
+          </div>
+          <div class="admin-stats" style="margin-bottom:24px">
+            <div class="admin-stat">
+              <div class="label">Completed Orders</div>
+              <div class="value green" id="an-completed">0</div>
+            </div>
+            <div class="admin-stat">
+              <div class="label">Conversion Rate</div>
+              <div class="value" id="an-conversion">0%</div>
+            </div>
+            <div class="admin-stat">
+              <div class="label">Card Payments</div>
+              <div class="value" id="an-card">0</div>
+            </div>
+            <div class="admin-stat">
+              <div class="label">Crypto Payments</div>
+              <div class="value" id="an-crypto">0</div>
+            </div>
+          </div>
+
+          <div class="checkout-box" style="margin-bottom:24px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px">Monthly Revenue (last 12 months)</h2>
+            <div id="an-monthly-chart" style="display:flex;align-items:flex-end;gap:6px;height:200px;padding-top:20px"></div>
+          </div>
+
+          <div class="checkout-box">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px">Top Selling Products</h2>
+            <div id="an-top-products"></div>
+          </div>
+        </div>
+
         <div id="admin-products-tab" style="display:none">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
             <div class="admin-title" style="margin:0">Products</div>
@@ -3344,7 +3395,7 @@ function adminLogout() {
 }
 
 function adminTab(tab, evt) {
-  ['orders','products','pages','users','profile','settings'].forEach(t => {
+  ['orders','analytics','products','pages','users','profile','settings'].forEach(t => {
     const el = document.getElementById('admin-'+t+'-tab');
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
@@ -3352,6 +3403,7 @@ function adminTab(tab, evt) {
   const clicked = (evt && evt.target) || (typeof event !== 'undefined' && event.target);
   if (clicked) clicked.classList.add('active');
   if (tab === 'orders') renderAdminOrders(null);
+  if (tab === 'analytics') renderAnalytics();
   if (tab === 'products') renderAdminProducts();
   if (tab === 'pages') renderAdminPages();
   if (tab === 'users') renderAdminUsers();
@@ -3370,12 +3422,14 @@ async function renderAdminOrders(ordersData) {
       adminOrders = data.orders || [];
     } catch(e) { adminOrders = []; }
   }
+  // Revenue counts both 'paid' and 'delivered' (delivered is still a completed sale)
+  const completed = adminOrders.filter(o=>o.status==='paid' || o.status==='delivered');
   const paid = adminOrders.filter(o=>o.status==='paid');
   const pending = adminOrders.filter(o=>o.status==='pending');
   document.getElementById('stat-total').textContent = adminOrders.length;
-  document.getElementById('stat-paid').textContent = paid.length;
+  document.getElementById('stat-paid').textContent = completed.length;
   document.getElementById('stat-pending').textContent = pending.length;
-  document.getElementById('stat-revenue').textContent = '$' + paid.reduce((s,o)=>s+o.total,0).toFixed(2);
+  document.getElementById('stat-revenue').textContent = '$' + completed.reduce((s,o)=>s+o.total,0).toFixed(2);
 
   const el = document.getElementById('admin-orders-list');
   if (adminOrders.length === 0) {
@@ -3426,6 +3480,78 @@ async function adminDeleteOrder(id) {
     showToast('Order deleted');
     renderAdminOrders(adminOrders);
   } catch(e) { showToast('Could not delete'); }
+}
+
+async function renderAnalytics() {
+  // Ensure we have orders loaded
+  if (!adminOrders || adminOrders.length === 0) {
+    try {
+      const res = await fetch(WORKER_URL + '/orders', { headers: { 'X-Admin-Password': adminPassword } });
+      const data = await res.json();
+      adminOrders = data.orders || [];
+    } catch(e) {}
+  }
+  const completed = adminOrders.filter(o => o.status === 'paid' || o.status === 'delivered');
+  const now = new Date();
+  const thisMonth = now.getMonth(), thisYear = now.getFullYear();
+
+  const totalRev = completed.reduce((s,o)=>s+o.total,0);
+  const monthRev = completed.filter(o=>{const d=new Date(o.date);return d.getMonth()===thisMonth&&d.getFullYear()===thisYear;}).reduce((s,o)=>s+o.total,0);
+  const yearRev = completed.filter(o=>{const d=new Date(o.date);return d.getFullYear()===thisYear;}).reduce((s,o)=>s+o.total,0);
+  const aov = completed.length ? totalRev/completed.length : 0;
+
+  document.getElementById('an-total-rev').textContent = '$' + totalRev.toFixed(2);
+  document.getElementById('an-month-rev').textContent = '$' + monthRev.toFixed(2);
+  document.getElementById('an-year-rev').textContent = '$' + yearRev.toFixed(2);
+  document.getElementById('an-aov').textContent = '$' + aov.toFixed(2);
+  document.getElementById('an-completed').textContent = completed.length;
+  const convRate = adminOrders.length ? (completed.length/adminOrders.length*100) : 0;
+  document.getElementById('an-conversion').textContent = convRate.toFixed(1) + '%';
+  document.getElementById('an-card').textContent = completed.filter(o=>o.method!=='crypto').length;
+  document.getElementById('an-crypto').textContent = completed.filter(o=>o.method==='crypto').length;
+
+  // Monthly chart (last 12 months)
+  const months = [];
+  for (let i=11;i>=0;i--) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    months.push({ label: d.toLocaleString('en',{month:'short'}), year: d.getFullYear(), month: d.getMonth(), total: 0 });
+  }
+  completed.forEach(o=>{
+    const d = new Date(o.date);
+    const m = months.find(x=>x.month===d.getMonth()&&x.year===d.getFullYear());
+    if (m) m.total += o.total;
+  });
+  const maxVal = Math.max(...months.map(m=>m.total), 1);
+  document.getElementById('an-monthly-chart').innerHTML = months.map(m=>{
+    const h = Math.max((m.total/maxVal)*160, 2);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+      <div style="font-size:10px;color:var(--muted)">$${m.total.toFixed(0)}</div>
+      <div style="width:100%;height:${h}px;background:linear-gradient(180deg,#ff6b35,#e8194b);border-radius:4px 4px 0 0;min-height:2px"></div>
+      <div style="font-size:10px;color:var(--muted)">${m.label}</div>
+    </div>`;
+  }).join('');
+
+  // Top products
+  const productSales = {};
+  completed.forEach(o=>{
+    (o.items||[]).forEach(it=>{
+      if (!productSales[it.name]) productSales[it.name] = { qty:0, revenue:0 };
+      productSales[it.name].qty += (it.qty||1);
+      productSales[it.name].revenue += (it.price||0)*(it.qty||1);
+    });
+  });
+  const sorted = Object.entries(productSales).sort((a,b)=>b[1].revenue-a[1].revenue).slice(0,10);
+  const topEl = document.getElementById('an-top-products');
+  if (sorted.length === 0) {
+    topEl.innerHTML = '<div style="color:var(--muted);font-size:13px">No sales data yet</div>';
+  } else {
+    topEl.innerHTML = sorted.map(([name,d],i)=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px">${i+1}. ${name}</span>
+        <span style="font-size:13px"><span style="color:var(--muted)">${d.qty} sold</span> · <span style="color:var(--accent1);font-weight:600">$${d.revenue.toFixed(2)}</span></span>
+      </div>
+    `).join('');
+  }
 }
 
 function renderAdminProducts() {
