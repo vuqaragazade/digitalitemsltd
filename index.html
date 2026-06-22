@@ -1960,8 +1960,7 @@
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-            <label style="font-size:13px;color:var(--muted)">Filter by status:</label>
-            <select id="order-status-filter" onchange="renderAdminOrders(adminOrders)" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
+            <select id="order-status-filter" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
               <option value="all">All Orders</option>
               <option value="pending">Pending</option>
               <option value="paid">Paid</option>
@@ -1969,7 +1968,17 @@
               <option value="failed">Failed</option>
               <option value="delivered">Delivered</option>
             </select>
-            <input type="text" id="order-search" oninput="renderAdminOrders(adminOrders)" placeholder="Search by ID or email..." style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px" />
+            <select id="order-sort" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+            <select id="order-perpage" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
+              <option value="10">10 / page</option>
+              <option value="20">20 / page</option>
+              <option value="50">50 / page</option>
+              <option value="100">100 / page</option>
+            </select>
+            <input type="text" id="order-search" oninput="onOrderControlChange()" placeholder="Search by ID or email..." style="flex:1;min-width:160px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px" />
           </div>
           <div class="admin-table">
             <div class="admin-table-head" style="grid-template-columns:90px 1fr 120px 100px 65px 105px 36px">
@@ -1977,6 +1986,7 @@
             </div>
             <div id="admin-orders-list"></div>
           </div>
+          <div id="admin-orders-pagination" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap"></div>
         </div>
 
         <!-- Products Tab -->
@@ -2586,7 +2596,7 @@ function navigate(page, skipPush) {
       const dash = document.getElementById('admin-dashboard');
       if (ls) ls.style.display = 'none';
       if (dash) dash.style.display = 'block';
-      renderAdminOrders(null);
+      restoreOrderPrefs(); renderAdminOrders(null);
     } else {
       const ls = document.getElementById('admin-login-screen');
       const dash = document.getElementById('admin-dashboard');
@@ -3268,7 +3278,7 @@ async function doLogin() {
       navigate('admin');
       document.getElementById('admin-login-screen').style.display = 'none';
       document.getElementById('admin-dashboard').style.display = 'block';
-      renderAdminOrders(null);
+      restoreOrderPrefs(); renderAdminOrders(null);
       updateAuthUI();
       showToast('Welcome, admin');
       return;
@@ -3360,7 +3370,7 @@ function goAdminDashboard() {
   navigate('admin');
   document.getElementById('admin-login-screen').style.display = 'none';
   document.getElementById('admin-dashboard').style.display = 'block';
-  renderAdminOrders(null);
+  restoreOrderPrefs(); renderAdminOrders(null);
 }
 
 function universalLogout() {
@@ -3495,7 +3505,7 @@ function adminTab(tab, evt) {
   document.querySelectorAll('.admin-nav-item').forEach(el => el.classList.remove('active'));
   const clicked = (evt && evt.target) || (typeof event !== 'undefined' && event.target);
   if (clicked) clicked.classList.add('active');
-  if (tab === 'orders') renderAdminOrders(null);
+  if (tab === 'orders') { restoreOrderPrefs(); renderAdminOrders(null); }
   if (tab === 'analytics') renderAnalytics();
   if (tab === 'products') renderAdminProducts();
   if (tab === 'pages') renderAdminPages();
@@ -3506,6 +3516,7 @@ function adminTab(tab, evt) {
 }
 
 let adminOrders = [];
+let adminOrdersPage = 1;
 async function renderAdminOrders(ordersData) {
   if (ordersData) { adminOrders = ordersData; }
   else {
@@ -3533,6 +3544,8 @@ async function renderAdminOrders(ordersData) {
   // Apply status filter + search
   const statusFilter = (document.getElementById('order-status-filter') || {}).value || 'all';
   const searchTerm = ((document.getElementById('order-search') || {}).value || '').toLowerCase().trim();
+  const sortOrder = (document.getElementById('order-sort') || {}).value || 'newest';
+  const perPage = parseInt((document.getElementById('order-perpage') || {}).value) || 10;
   let filtered = adminOrders.filter(o => {
     if (statusFilter !== 'all' && o.status !== statusFilter) return false;
     if (searchTerm) {
@@ -3541,15 +3554,25 @@ async function renderAdminOrders(ordersData) {
     }
     return true;
   });
-  // Sort newest first
-  filtered.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+  // Sort by date
+  filtered.sort((a,b) => {
+    const diff = new Date(b.date||0) - new Date(a.date||0);
+    return sortOrder === 'oldest' ? -diff : diff;
+  });
 
   if (filtered.length === 0) {
     el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">No orders match your filter</div>';
+    document.getElementById('admin-orders-pagination').innerHTML = '';
     return;
   }
 
-  el.innerHTML = filtered.map(o => `
+  // Pagination
+  const totalPages = Math.ceil(filtered.length / perPage);
+  if (adminOrdersPage > totalPages) adminOrdersPage = 1;
+  const start = (adminOrdersPage - 1) * perPage;
+  const pageOrders = filtered.slice(start, start + perPage);
+
+  el.innerHTML = pageOrders.map(o => `
     <div class="admin-table-row" style="grid-template-columns:90px 1fr 120px 100px 65px 105px 36px">
       <span style="font-size:11px;color:var(--muted)">${o.id}${o.method==='crypto'?'<br><span style="color:#fb923c">₿ crypto</span>':''}</span>
       <span>${o.email}<br><span style="font-size:11px;color:var(--muted)">${o.name||''}${o.telegram?' · '+o.telegram:''}</span>${o.note?'<br><span style="font-size:11px;color:#fb923c">⚠ '+o.note+'</span>':''}</span>
@@ -3566,6 +3589,62 @@ async function renderAdminOrders(ordersData) {
       <button onclick="adminDeleteOrder('${o.id}')" title="Delete" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:5px 7px;border-radius:6px;cursor:pointer;font-size:13px">🗑</button>
     </div>
   `).join('');
+
+  renderOrdersPagination(totalPages, filtered.length, start, pageOrders.length);
+}
+
+function renderOrdersPagination(totalPages, totalCount, start, shown) {
+  const pag = document.getElementById('admin-orders-pagination');
+  if (!pag) return;
+  if (totalPages <= 1) {
+    pag.innerHTML = `<span style="font-size:12px;color:var(--muted)">Showing all ${totalCount} orders</span>`;
+    return;
+  }
+  let html = `<span style="font-size:12px;color:var(--muted);margin-right:8px">${start+1}–${start+shown} of ${totalCount}</span>`;
+  const btnStyle = 'background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px';
+  const btnActive = 'background:var(--accent1);border:1px solid var(--accent1);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600';
+  html += `<button onclick="goOrdersPage(${adminOrdersPage-1})" ${adminOrdersPage<=1?'disabled':''} style="${btnStyle};${adminOrdersPage<=1?'opacity:0.4;cursor:not-allowed':''}">‹</button>`;
+  // Page numbers (show window around current)
+  let pages = [];
+  const cur = adminOrdersPage;
+  pages.push(1);
+  for (let i = cur-1; i <= cur+1; i++) if (i>1 && i<totalPages) pages.push(i);
+  if (totalPages>1) pages.push(totalPages);
+  pages = [...new Set(pages)].sort((a,b)=>a-b);
+  let last = 0;
+  for (const p of pages) {
+    if (p - last > 1) html += `<span style="color:var(--muted)">…</span>`;
+    html += `<button onclick="goOrdersPage(${p})" style="${p===cur?btnActive:btnStyle}">${p}</button>`;
+    last = p;
+  }
+  html += `<button onclick="goOrdersPage(${adminOrdersPage+1})" ${adminOrdersPage>=totalPages?'disabled':''} style="${btnStyle};${adminOrdersPage>=totalPages?'opacity:0.4;cursor:not-allowed':''}">›</button>`;
+  pag.innerHTML = html;
+}
+
+function goOrdersPage(p) {
+  adminOrdersPage = p;
+  renderAdminOrders(adminOrders);
+  document.getElementById('admin-orders-tab').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// When sort/perpage/search changes: save prefs, reset to page 1, re-render
+function onOrderControlChange() {
+  adminOrdersPage = 1;
+  const sort = (document.getElementById('order-sort')||{}).value;
+  const perpage = (document.getElementById('order-perpage')||{}).value;
+  if (sort) localStorage.setItem('di_order_sort', sort);
+  if (perpage) localStorage.setItem('di_order_perpage', perpage);
+  renderAdminOrders(adminOrders);
+}
+
+// Restore saved order view preferences
+function restoreOrderPrefs() {
+  const sort = localStorage.getItem('di_order_sort');
+  const perpage = localStorage.getItem('di_order_perpage');
+  const sortEl = document.getElementById('order-sort');
+  const ppEl = document.getElementById('order-perpage');
+  if (sortEl && sort) sortEl.value = sort;
+  if (ppEl && perpage) ppEl.value = perpage;
 }
 
 function formatOrderDate(dateStr) {
