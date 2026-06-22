@@ -2201,11 +2201,11 @@
     </div>
     <div class="form-group">
       <label>Stock</label>
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:var(--text);cursor:pointer;text-transform:none;font-weight:400">
-        <input type="checkbox" id="prod-unlimited" onchange="toggleStockInput()" style="width:auto;cursor:pointer" />
-        Always in stock (unlimited)
-      </label>
-      <input type="number" id="prod-stock" placeholder="Quantity available" min="0" step="1" />
+      <div style="display:flex;gap:8px;align-items:center">
+        <button type="button" id="stock-btn-always" onclick="setStockMode('always')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--accent1);background:var(--accent1);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Always in stock</button>
+        <button type="button" id="stock-btn-set" onclick="setStockMode('set')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">Set stock</button>
+        <input type="number" id="prod-stock" placeholder="Qty" min="0" step="1" style="width:90px;display:none" />
+      </div>
     </div>
     <div class="form-group">
       <label>Short Spec (shown on listing, use · to separate)</label>
@@ -3727,12 +3727,21 @@ async function renderAdminUsers() {
 
 let editingProductId = null;
 
-function toggleStockInput() {
-  const unlimited = document.getElementById('prod-unlimited').checked;
-  const stockInput = document.getElementById('prod-stock');
-  stockInput.disabled = unlimited;
-  stockInput.style.opacity = unlimited ? '0.4' : '1';
-  if (unlimited) stockInput.value = '';
+let stockMode = 'always'; // 'always' or 'set'
+function setStockMode(mode) {
+  stockMode = mode;
+  const alwaysBtn = document.getElementById('stock-btn-always');
+  const setBtn = document.getElementById('stock-btn-set');
+  const input = document.getElementById('prod-stock');
+  if (mode === 'always') {
+    alwaysBtn.style.background = 'var(--accent1)'; alwaysBtn.style.color = '#fff'; alwaysBtn.style.borderColor = 'var(--accent1)';
+    setBtn.style.background = 'var(--bg3)'; setBtn.style.color = 'var(--text)'; setBtn.style.borderColor = 'var(--border)';
+    input.style.display = 'none';
+  } else {
+    setBtn.style.background = 'var(--accent1)'; setBtn.style.color = '#fff'; setBtn.style.borderColor = 'var(--accent1)';
+    alwaysBtn.style.background = 'var(--bg3)'; alwaysBtn.style.color = 'var(--text)'; alwaysBtn.style.borderColor = 'var(--border)';
+    input.style.display = 'block';
+  }
 }
 
 function slugify(text) {
@@ -3760,10 +3769,8 @@ function openAddProduct() {
   document.getElementById('prod-image-status').textContent = '';
   document.getElementById('prod-image-file').value = '';
   document.getElementById('prod-slug').value = '';
-  document.getElementById('prod-unlimited').checked = false;
   document.getElementById('prod-stock').value = '';
-  document.getElementById('prod-stock').disabled = false;
-  document.getElementById('prod-stock').style.opacity = '1';
+  setStockMode('always');
   const applyAll = document.getElementById('prod-image-applyall'); if (applyAll) applyAll.checked = false;
   document.getElementById('prod-metatitle').value = '';
   document.getElementById('prod-metadesc').value = '';
@@ -3789,10 +3796,8 @@ function editProduct(id) {
   document.getElementById('prod-image-file').value = '';
   document.getElementById('prod-slug').value = p.slug || slugify(p.name);
   const unlimited = (p.stock === undefined || p.stock === null);
-  document.getElementById('prod-unlimited').checked = unlimited;
   document.getElementById('prod-stock').value = unlimited ? '' : p.stock;
-  document.getElementById('prod-stock').disabled = unlimited;
-  document.getElementById('prod-stock').style.opacity = unlimited ? '0.4' : '1';
+  setStockMode(unlimited ? 'always' : 'set');
   const applyAllEdit = document.getElementById('prod-image-applyall'); if (applyAllEdit) applyAllEdit.checked = false;
   document.getElementById('prod-metatitle').value = p.metaTitle || '';
   document.getElementById('prod-metadesc').value = p.metaDesc || '';
@@ -3857,9 +3862,8 @@ async function saveProduct() {
   }
   const applyAll = document.getElementById('prod-image-applyall').checked;
   // Stock: null = unlimited (always in stock), number = limited quantity
-  const unlimited = document.getElementById('prod-unlimited').checked;
   let stock = null;
-  if (!unlimited) {
+  if (stockMode === 'set') {
     stock = parseInt(document.getElementById('prod-stock').value) || 0;
   }
   if (editingProductId) {
