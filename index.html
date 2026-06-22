@@ -2238,20 +2238,6 @@
         <input type="text" id="prod-slug" placeholder="twitter-accounts-2010" style="flex:1" />
       </div>
     </div>
-    <div class="form-group">
-      <label>Stock</label>
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;text-transform:none">
-          <input type="radio" name="prod-stock-type" id="prod-stock-unlimited" value="unlimited" checked onchange="toggleStockInput()" style="width:auto;cursor:pointer" />
-          Always in stock (unlimited)
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;text-transform:none">
-          <input type="radio" name="prod-stock-type" id="prod-stock-limited" value="limited" onchange="toggleStockInput()" style="width:auto;cursor:pointer" />
-          Limited quantity
-        </label>
-      </div>
-      <input type="number" id="prod-stock" placeholder="Enter available quantity" min="0" step="1" style="margin-top:10px;display:none" />
-    </div>
     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
       <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">SEO Settings</div>
       <div class="form-group">
@@ -3752,11 +3738,6 @@ function slugify(text) {
     .replace(/^-|-$/g, '');
 }
 
-function toggleStockInput() {
-  const limited = document.getElementById('prod-stock-limited').checked;
-  document.getElementById('prod-stock').style.display = limited ? 'block' : 'none';
-}
-
 function openAddProduct() {
   editingProductId = null;
   document.getElementById('modal-title').textContent = 'Add Product';
@@ -3774,9 +3755,6 @@ function openAddProduct() {
   const applyAll = document.getElementById('prod-image-applyall'); if (applyAll) applyAll.checked = false;
   document.getElementById('prod-metatitle').value = '';
   document.getElementById('prod-metadesc').value = '';
-  document.getElementById('prod-stock-unlimited').checked = true;
-  document.getElementById('prod-stock').value = '';
-  document.getElementById('prod-stock').style.display = 'none';
   document.getElementById('product-modal').classList.add('open');
 }
 
@@ -3801,16 +3779,6 @@ function editProduct(id) {
   const applyAllEdit = document.getElementById('prod-image-applyall'); if (applyAllEdit) applyAllEdit.checked = false;
   document.getElementById('prod-metatitle').value = p.metaTitle || '';
   document.getElementById('prod-metadesc').value = p.metaDesc || '';
-  // Stock: if stock is a number, it's limited; otherwise unlimited
-  if (typeof p.stock === 'number') {
-    document.getElementById('prod-stock-limited').checked = true;
-    document.getElementById('prod-stock').value = p.stock;
-    document.getElementById('prod-stock').style.display = 'block';
-  } else {
-    document.getElementById('prod-stock-unlimited').checked = true;
-    document.getElementById('prod-stock').value = '';
-    document.getElementById('prod-stock').style.display = 'none';
-  }
   document.getElementById('product-modal').classList.add('open');
 }
 
