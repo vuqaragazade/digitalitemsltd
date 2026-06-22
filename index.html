@@ -2143,6 +2143,11 @@
             <input type="file" id="import-csv-file" accept=".csv" style="font-size:13px;color:var(--muted);margin-bottom:14px" />
             <button class="btn btn-primary" onclick="importShopifyCSV()" id="import-btn">Import CSV</button>
             <div id="import-progress" style="margin-top:14px;font-size:13px;color:var(--muted)"></div>
+            <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
+              <p style="font-size:13px;color:var(--muted);margin-bottom:12px">If orders are missing or out of order, rebuild the order index:</p>
+              <button class="btn btn-ghost" onclick="rebuildOrderIndex()" id="rebuild-btn">Rebuild Order Index</button>
+              <div id="rebuild-progress" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
+            </div>
           </div>
           <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">Payment Limits</h2>
@@ -3998,6 +4003,29 @@ async function saveAdminProfile() {
   } catch(e) {
     showToast('Could not save');
   }
+}
+
+async function rebuildOrderIndex() {
+  const btn = document.getElementById('rebuild-btn');
+  const progress = document.getElementById('rebuild-progress');
+  btn.disabled = true;
+  progress.textContent = 'Rebuilding index from all orders... this may take a moment.';
+  try {
+    const res = await fetch(WORKER_URL + '/rebuild-index', {
+      method: 'POST',
+      headers: {'X-Admin-Password': adminPassword}
+    });
+    const data = await res.json();
+    if (data.error) { progress.textContent = 'Error: ' + data.error; btn.disabled = false; return; }
+    progress.innerHTML = `<span style="color:#4ade80">✓ Index rebuilt — ${data.count} orders found.</span>`;
+    showToast('Index rebuilt: ' + data.count + ' orders');
+    // Reload orders
+    adminOrders = [];
+    renderAdminOrders(null);
+  } catch(e) {
+    progress.textContent = 'Rebuild failed: ' + e.message;
+  }
+  btn.disabled = false;
 }
 
 async function importShopifyCSV() {
