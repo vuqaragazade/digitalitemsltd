@@ -2128,6 +2128,13 @@
             <button class="btn btn-primary" onclick="saveAdminProfile()">Save Profile</button>
           </div>
           <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">Import Orders (Shopify CSV)</h2>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Upload your Shopify orders export (Plain CSV). Existing orders with the same ID will be updated.</p>
+            <input type="file" id="import-csv-file" accept=".csv" style="font-size:13px;color:var(--muted);margin-bottom:14px" />
+            <button class="btn btn-primary" onclick="importShopifyCSV()" id="import-btn">Import CSV</button>
+            <div id="import-progress" style="margin-top:14px;font-size:13px;color:var(--muted)"></div>
+          </div>
+          <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">Payment Limits</h2>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="form-group">
@@ -3912,6 +3919,126 @@ async function saveAdminProfile() {
   } catch(e) {
     showToast('Could not save');
   }
+}
+
+async function importShopifyCSV() {
+  const fileInput = document.getElementById('import-csv-file');
+  const progress = document.getElementById('import-progress');
+  const btn = document.getElementById('import-btn');
+  const file = fileInput.files[0];
+  if (!file) { showToast('Choose a CSV file first'); return; }
+
+  btn.disabled = true;
+  progress.textContent = 'Reading file...';
+
+  try {
+    const text = await file.text();
+    const orders = parseShopifyCSV(text);
+    if (orders.length === 0) { progress.textContent = 'No orders found in file.'; btn.disabled = false; return; }
+
+    progress.textContent = `Parsed ${orders.length} orders. Importing...`;
+
+    // Send in batches of 100 to avoid request size limits
+    const batchSize = 100;
+    let imported = 0;
+    for (let i = 0; i < orders.length; i += batchSize) {
+      const batch = orders.slice(i, i + batchSize);
+      const res = await fetch(WORKER_URL + '/import-orders', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+        body: JSON.stringify({ orders: batch })
+      });
+      const data = await res.json();
+      if (data.error) { progress.textContent = 'Error: ' + data.error; btn.disabled = false; return; }
+      imported += data.imported || batch.length;
+      progress.textContent = `Imported ${imported} / ${orders.length}...`;
+    }
+    progress.innerHTML = `<span style="color:#4ade80">✓ Successfully imported ${imported} orders!</span>`;
+    showToast('Import complete: ' + imported + ' orders');
+  } catch(e) {
+    progress.textContent = 'Import failed: ' + e.message;
+  }
+  btn.disabled = false;
+}
+
+// Parse Shopify orders CSV into our order format
+function parseShopifyCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0];
+  const idx = (name) => headers.indexOf(name);
+
+  const col = {
+    name: idx('Name'), email: idx('Email'), fin: idx('Financial Status'),
+    ful: idx('Fulfillment Status'), total: idx('Total'), created: idx('Created at'),
+    billingName: idx('Billing Name'), phone: idx('Phone'), billingPhone: idx('Billing Phone'),
+    addr1: idx('Billing Address1'), city: idx('Billing City'), province: idx('Billing Province'),
+    country: idx('Billing Country'), zip: idx('Billing Zip'),
+    liName: idx('Lineitem name'), liQty: idx('Lineitem quantity'), liPrice: idx('Lineitem price')
+  };
+
+  const orders = {};
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const name = row[col.name];
+    if (!name) continue;
+    if (!orders[name]) {
+      const fin = row[col.fin] || '';
+      const ful = row[col.ful] || '';
+      let status;
+      if (['refunded','voided','expired'].includes(fin)) status = 'failed';
+      else if (fin === 'paid' && ful === 'fulfilled') status = 'delivered';
+      else if (fin === 'paid') status = 'paid';
+      else status = 'pending';
+
+      let dateIso = row[col.created] || '';
+      dateIso = dateIso.replace(/ [+-]\d{4}$/, '').replace(' ', 'T') + 'Z';
+
+      const addr = [row[col.addr1], row[col.city], row[col.province], row[col.country], row[col.zip]].filter(Boolean).join(', ');
+
+      orders[name] = {
+        id: name.replace('#', 'ORD-'),
+        email: row[col.email] || '',
+        name: row[col.billingName] || '',
+        phone: row[col.phone] || row[col.billingPhone] || '',
+        address: addr,
+        total: parseFloat(row[col.total] || 0),
+        status, method: 'card',
+        date: dateIso, source: 'shopify',
+        items: []
+      };
+    }
+    if (row[col.liName]) {
+      orders[name].items.push({
+        name: row[col.liName],
+        qty: parseInt(row[col.liQty] || 1),
+        price: parseFloat(row[col.liPrice] || 0)
+      });
+    }
+  }
+  return Object.values(orders);
+}
+
+// Robust CSV parser handling quoted fields with commas/newlines
+function parseCSVRows(text) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], next = text[i+1];
+    if (inQuotes) {
+      if (c === '"' && next === '"') { field += '"'; i++; }
+      else if (c === '"') { inQuotes = false; }
+      else { field += c; }
+    } else {
+      if (c === '"') { inQuotes = true; }
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\r') { /* skip */ }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else { field += c; }
+    }
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
 }
 
 function saveSettings() {
