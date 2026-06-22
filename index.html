@@ -1739,9 +1739,10 @@
 
     <div id="account-orders-section">
       <div class="orders-table">
-        <div class="orders-head" style="grid-template-columns:120px 1fr 100px 80px">
+        <div class="orders-head" style="grid-template-columns:110px 1fr 95px 90px 80px">
           <span>Order ID</span>
           <span>Items</span>
+          <span>Date</span>
           <span>Total</span>
           <span>Status</span>
         </div>
@@ -1958,9 +1959,21 @@
               <div class="value orange" id="stat-revenue">$0</div>
             </div>
           </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+            <label style="font-size:13px;color:var(--muted)">Filter by status:</label>
+            <select id="order-status-filter" onchange="renderAdminOrders(adminOrders)" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
+              <option value="all">All Orders</option>
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="partial">Partial</option>
+              <option value="failed">Failed</option>
+              <option value="delivered">Delivered</option>
+            </select>
+            <input type="text" id="order-search" oninput="renderAdminOrders(adminOrders)" placeholder="Search by ID or email..." style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px" />
+          </div>
           <div class="admin-table">
-            <div class="admin-table-head" style="grid-template-columns:90px 1fr 130px 70px 110px 40px">
-              <span>ID</span><span>Customer</span><span>Items</span><span>Total</span><span>Status</span><span></span>
+            <div class="admin-table-head" style="grid-template-columns:90px 1fr 120px 100px 65px 105px 36px">
+              <span>ID</span><span>Customer</span><span>Items</span><span>Date</span><span>Total</span><span>Status</span><span></span>
             </div>
             <div id="admin-orders-list"></div>
           </div>
@@ -3368,10 +3381,12 @@ async function renderAccount() {
       el.innerHTML = '<div style="padding:32px 24px;text-align:center;color:var(--muted)">No orders yet</div>';
       return;
     }
+    userOrders.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
     el.innerHTML = userOrders.map(o => `
-      <div class="order-row" style="grid-template-columns:120px 1fr 100px 80px">
+      <div class="order-row" style="grid-template-columns:110px 1fr 95px 90px 80px">
         <span style="font-family:var(--font-display);font-size:12px;color:var(--muted)">${o.id}</span>
         <span>${o.items.map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</span>
+        <span style="font-size:11px;color:var(--muted)">${formatOrderDate(o.date)}</span>
         <span style="color:var(--accent1);font-weight:600">$${o.total.toFixed(2)}</span>
         <span class="status-badge status-${o.status}">${o.status}</span>
       </div>
@@ -3461,22 +3476,50 @@ async function renderAdminOrders(ordersData) {
     el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">No orders yet</div>';
     return;
   }
-  el.innerHTML = adminOrders.map(o => `
-    <div class="admin-table-row" style="grid-template-columns:90px 1fr 130px 70px 110px 40px">
+
+  // Apply status filter + search
+  const statusFilter = (document.getElementById('order-status-filter') || {}).value || 'all';
+  const searchTerm = ((document.getElementById('order-search') || {}).value || '').toLowerCase().trim();
+  let filtered = adminOrders.filter(o => {
+    if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+    if (searchTerm) {
+      const hay = (o.id + ' ' + (o.email||'') + ' ' + (o.name||'')).toLowerCase();
+      if (!hay.includes(searchTerm)) return false;
+    }
+    return true;
+  });
+  // Sort newest first
+  filtered.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+
+  if (filtered.length === 0) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">No orders match your filter</div>';
+    return;
+  }
+
+  el.innerHTML = filtered.map(o => `
+    <div class="admin-table-row" style="grid-template-columns:90px 1fr 120px 100px 65px 105px 36px">
       <span style="font-size:11px;color:var(--muted)">${o.id}${o.method==='crypto'?'<br><span style="color:#fb923c">₿ crypto</span>':''}</span>
       <span>${o.email}<br><span style="font-size:11px;color:var(--muted)">${o.name||''}${o.telegram?' · '+o.telegram:''}</span>${o.note?'<br><span style="font-size:11px;color:#fb923c">⚠ '+o.note+'</span>':''}</span>
       <span style="font-size:12px;color:var(--muted)">${(o.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</span>
-      <span style="color:var(--accent1);font-weight:600">$${o.total.toFixed(2)}</span>
-      <select onchange="adminUpdateOrderStatus('${o.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:12px;cursor:pointer">
+      <span style="font-size:11px;color:var(--muted)">${formatOrderDate(o.date)}</span>
+      <span style="color:var(--accent1);font-weight:600;font-size:13px">$${o.total.toFixed(2)}</span>
+      <select onchange="adminUpdateOrderStatus('${o.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 6px;color:var(--text);font-size:11px;cursor:pointer">
         <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
         <option value="paid" ${o.status==='paid'?'selected':''}>Paid</option>
         <option value="partial" ${o.status==='partial'?'selected':''}>Partial</option>
         <option value="failed" ${o.status==='failed'?'selected':''}>Failed</option>
         <option value="delivered" ${o.status==='delivered'?'selected':''}>Delivered</option>
       </select>
-      <button onclick="adminDeleteOrder('${o.id}')" title="Delete" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:13px">🗑</button>
+      <button onclick="adminDeleteOrder('${o.id}')" title="Delete" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:5px 7px;border-radius:6px;cursor:pointer;font-size:13px">🗑</button>
     </div>
   `).join('');
+}
+
+function formatOrderDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 }
 
 async function adminUpdateOrderStatus(id, status) {
