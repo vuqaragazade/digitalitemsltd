@@ -2175,6 +2175,12 @@
             </div>
 
             <div class="form-group">
+              <label>Google Ads Conversion Label (optional)</label>
+              <input type="text" id="track-gadslabel" placeholder="AbCdEfGhIjK-l2mNoPq" />
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">From your purchase conversion action in Google Ads. Without it, basic Ads tracking still works.</p>
+            </div>
+
+            <div class="form-group">
               <label>Google Tag Manager (Container ID)</label>
               <input type="text" id="track-gtm" placeholder="GTM-XXXXXXX" />
               <p style="font-size:11px;color:var(--muted);margin-top:4px">If you use GTM, you can manage everything from there instead.</p>
@@ -2941,6 +2947,23 @@ function productToItem(p, qty) {
   };
 }
 
+// Fire Google Ads conversion (separate from GA4 purchase event)
+function fireGoogleAdsConversion(data) {
+  try {
+    if (typeof gtag !== 'function') return;
+    const adsId = (window._trackingCache && window._trackingCache.gads) || '';
+    const label = (window._trackingCache && window._trackingCache.gadsLabel) || '';
+    if (!adsId) return;
+    const sendTo = label ? (adsId + '/' + label) : adsId;
+    gtag('event', 'conversion', {
+      send_to: sendTo,
+      value: data.value || 0,
+      currency: data.currency || 'USD',
+      transaction_id: data.transaction_id || ''
+    });
+  } catch(e) {}
+}
+
 function addToCart(id) {
   const prod = allProducts.find(p => p.id === id);
   if (!prod) return;
@@ -3198,13 +3221,12 @@ function showPaymentResult(status, orderId) {
   if (!layout) return;
   if (status === 'success') {
     // Fire GA4/Google Ads purchase conversion event
-    if (window._pendingPurchase && window._pendingPurchase.transaction_id === orderId) {
-      trackEvent('purchase', window._pendingPurchase);
-      window._pendingPurchase = null;
-    } else {
-      // Fallback: fire with order id at minimum
-      trackEvent('purchase', { transaction_id: orderId, currency: 'USD' });
-    }
+    const purchaseData = (window._pendingPurchase && window._pendingPurchase.transaction_id === orderId)
+      ? window._pendingPurchase
+      : { transaction_id: orderId, currency: 'USD' };
+    trackEvent('purchase', purchaseData);
+    fireGoogleAdsConversion(purchaseData);
+    window._pendingPurchase = null;
     window._checkoutTracked = false;
     // Payment confirmed — now clear the cart
     cart = []; saveCart(); updateCartUI();
@@ -4169,6 +4191,7 @@ async function saveTracking() {
   const config = {
     ga4: document.getElementById('track-ga4').value.trim(),
     gads: document.getElementById('track-gads').value.trim(),
+    gadsLabel: document.getElementById('track-gadslabel').value.trim(),
     gtm: document.getElementById('track-gtm').value.trim(),
     yandex: document.getElementById('track-yandex').value.trim(),
     metapixel: document.getElementById('track-metapixel').value.trim(),
@@ -4201,7 +4224,7 @@ async function loadTrackingSettings() {
     const data = await res.json();
     const t = data.tracking || {};
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-    set('track-ga4', t.ga4); set('track-gads', t.gads); set('track-gtm', t.gtm);
+    set('track-ga4', t.ga4); set('track-gads', t.gads); set('track-gadslabel', t.gadsLabel); set('track-gtm', t.gtm);
     set('track-yandex', t.yandex); set('track-metapixel', t.metapixel);
     set('track-tiktok', t.tiktok); set('track-customhead', t.customhead);
   } catch(e) {}
@@ -4266,6 +4289,7 @@ async function injectTracking() {
     const data = await res.json();
     const t = data.tracking || {};
     if (!t || Object.keys(t).length === 0) return;
+    window._trackingCache = t; // cache for conversion events
 
     // Google Tag (gtag.js) — used by GA4 and Google Ads
     const gtagId = t.ga4 || t.gads;
