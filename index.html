@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- ═══════════════════════════════════════════════════
+       ANALYTICS — dataLayer for GA4 / Google Ads / GTM
+       To activate: paste your GTM or GA4 snippet where marked below.
+       All e-commerce events (view_item, add_to_cart, purchase, etc.)
+       are already pushed to dataLayer by the site.
+       ═══════════════════════════════════════════════════ -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+  </script>
+
+  <!-- ┌─────────────────────────────────────────────────┐
+       │ PASTE YOUR GOOGLE TAG (GA4) OR GTM SNIPPET HERE  │
+       │ Example GA4:                                     │
+       │ <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
+       │ <script>gtag('js', new Date()); gtag('config','G-XXXXXXX');</script>
+       │                                                  │
+       │ Example Google Ads:                              │
+       │ gtag('config', 'AW-XXXXXXXXX');                  │
+       └─────────────────────────────────────────────────┘ -->
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="referrer" content="no-referrer" />
@@ -2138,6 +2159,52 @@
             <button class="btn btn-primary" onclick="saveAdminProfile()">Save Profile</button>
           </div>
           <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:8px;padding-bottom:16px;border-bottom:1px solid var(--border)">Tracking & Analytics</h2>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Paste your tracking IDs or full snippets. They're injected into the correct place automatically. E-commerce events (view_item, add_to_cart, purchase) are already sent to all of them.</p>
+
+            <div class="form-group">
+              <label>Google Analytics 4 (Measurement ID)</label>
+              <input type="text" id="track-ga4" placeholder="G-XXXXXXXXXX" />
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Just the ID. Full gtag.js loads automatically.</p>
+            </div>
+
+            <div class="form-group">
+              <label>Google Ads (Conversion ID)</label>
+              <input type="text" id="track-gads" placeholder="AW-XXXXXXXXX" />
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">For conversion tracking on purchases.</p>
+            </div>
+
+            <div class="form-group">
+              <label>Google Tag Manager (Container ID)</label>
+              <input type="text" id="track-gtm" placeholder="GTM-XXXXXXX" />
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">If you use GTM, you can manage everything from there instead.</p>
+            </div>
+
+            <div class="form-group">
+              <label>Yandex Metrica (Counter ID)</label>
+              <input type="text" id="track-yandex" placeholder="12345678" />
+            </div>
+
+            <div class="form-group">
+              <label>Meta Pixel (Facebook Pixel ID)</label>
+              <input type="text" id="track-metapixel" placeholder="1234567890123456" />
+            </div>
+
+            <div class="form-group">
+              <label>TikTok Pixel ID</label>
+              <input type="text" id="track-tiktok" placeholder="CXXXXXXXXXXXXXXXXX" />
+            </div>
+
+            <div class="form-group">
+              <label>Custom &lt;head&gt; code (advanced)</label>
+              <textarea id="track-customhead" rows="3" placeholder="Any other verification meta tags or scripts..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:monospace;outline:none;resize:vertical"></textarea>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveTracking()">Save Tracking Codes</button>
+            <p style="font-size:11px;color:var(--muted);margin-top:12px">⚠ Codes are validated before saving to prevent breaking the site.</p>
+          </div>
+
+          <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">Import Orders (Shopify CSV)</h2>
             <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Upload your Shopify orders export (Plain CSV). Existing orders with the same ID will be updated.</p>
             <input type="file" id="import-csv-file" accept=".csv" style="font-size:13px;color:var(--muted);margin-bottom:14px" />
@@ -2808,6 +2875,7 @@ function openProduct(id, skipPush) {
     </div>
   `;
   navigate('product', true);
+  trackEvent('view_item', { currency: 'USD', value: p.price, items: [productToItem(p, 1)] });
   // Push a real URL for this product (for refresh + sharing + SEO)
   if (!skipPush) {
     const slug = p.slug || slugify(p.name);
@@ -2836,6 +2904,7 @@ function addToCartQty(id) {
   else cart.push({...prod, qty: detailQty});
   saveCart();
   updateCartUI();
+  trackEvent('add_to_cart', { currency: 'USD', value: prod.price * detailQty, items: [productToItem(prod, detailQty)] });
   showToast(`✓ Added ${detailQty} × "${prod.name}" to cart`);
   openCart();
 }
@@ -2847,6 +2916,31 @@ function navigateBack() {
 // ════════════════════════════════════════
 // CART
 // ════════════════════════════════════════
+// ════════════════════════════════════════
+// E-COMMERCE EVENT TRACKING (GA4 / Google Ads / GTM)
+// ════════════════════════════════════════
+function trackEvent(eventName, ecommerce) {
+  try {
+    window.dataLayer = window.dataLayer || [];
+    // Clear previous ecommerce object (GA4 best practice)
+    window.dataLayer.push({ ecommerce: null });
+    window.dataLayer.push({
+      event: eventName,
+      ecommerce: ecommerce
+    });
+  } catch(e) {}
+}
+
+function productToItem(p, qty) {
+  return {
+    item_id: p.id,
+    item_name: p.name,
+    item_category: p.category,
+    price: p.price,
+    quantity: qty || 1
+  };
+}
+
 function addToCart(id) {
   const prod = allProducts.find(p => p.id === id);
   if (!prod) return;
@@ -2861,6 +2955,7 @@ function addToCart(id) {
   else { cart.push({...prod, qty: 1}); }
   saveCart();
   updateCartUI();
+  trackEvent('add_to_cart', { currency: 'USD', value: prod.price, items: [productToItem(prod, 1)] });
   showToast(`✓ "${prod.name}" added to cart`);
 }
 
@@ -2962,6 +3057,14 @@ function renderCheckout() {
     </div>
   `).join('');
   document.getElementById('order-total').textContent = '$' + cartTotal().toFixed(2);
+  // Track begin_checkout (once per checkout view)
+  if (cart.length && !window._checkoutTracked) {
+    window._checkoutTracked = true;
+    trackEvent('begin_checkout', {
+      currency: 'USD', value: cartTotal(),
+      items: cart.map(c => productToItem(c, c.qty))
+    });
+  }
 
   // Show payment limit warning and disable pay buttons if out of range
   const limitErr = checkCartLimits();
@@ -3094,6 +3197,15 @@ function showPaymentResult(status, orderId) {
   const layout = document.querySelector('#page-checkout .checkout-layout');
   if (!layout) return;
   if (status === 'success') {
+    // Fire GA4/Google Ads purchase conversion event
+    if (window._pendingPurchase && window._pendingPurchase.transaction_id === orderId) {
+      trackEvent('purchase', window._pendingPurchase);
+      window._pendingPurchase = null;
+    } else {
+      // Fallback: fire with order id at minimum
+      trackEvent('purchase', { transaction_id: orderId, currency: 'USD' });
+    }
+    window._checkoutTracked = false;
     // Payment confirmed — now clear the cart
     cart = []; saveCart(); updateCartUI();
     // make sure user is on checkout page to see it
@@ -3123,6 +3235,15 @@ async function processCryptoPayment() {
 
   const orderId = 'ORD-' + Math.random().toString(36).substr(2,8).toUpperCase();
   const total = cartTotal();
+
+  trackEvent('add_payment_info', {
+    currency: 'USD', value: total, payment_type: 'Crypto',
+    items: cart.map(c => productToItem(c, c.qty))
+  });
+  window._pendingPurchase = {
+    transaction_id: orderId, currency: 'USD', value: total,
+    items: cart.map(c => productToItem(c, c.qty))
+  };
 
   if (currentUser) {
     currentUser.orders = currentUser.orders || [];
@@ -3182,6 +3303,17 @@ async function processPayment() {
 
   const orderId = 'ORD-' + Math.random().toString(36).substr(2,8).toUpperCase();
   const total = cartTotal();
+
+  // Track payment info entered (card)
+  trackEvent('add_payment_info', {
+    currency: 'USD', value: total, payment_type: 'Card',
+    items: cart.map(c => productToItem(c, c.qty))
+  });
+  // Stash purchase data so we can fire 'purchase' when payment confirms
+  window._pendingPurchase = {
+    transaction_id: orderId, currency: 'USD', value: total,
+    items: cart.map(c => productToItem(c, c.qty))
+  };
 
   // Save order locally first
   const order = {
@@ -3516,7 +3648,7 @@ function adminTab(tab, evt) {
   if (tab === 'pages') renderAdminPages();
   if (tab === 'users') renderAdminUsers();
   if (tab === 'profile') loadAdminProfile();
-  if (tab === 'settings') loadPaymentLimits();
+  if (tab === 'settings') { loadPaymentLimits(); loadTrackingSettings(); }
   if (tab === 'settings') loadAdminProfile();
 }
 
@@ -4028,6 +4160,129 @@ async function rebuildOrderIndex() {
   btn.disabled = false;
 }
 
+// ════════════════════════════════════════
+// TRACKING CODES MANAGEMENT
+// ════════════════════════════════════════
+let trackingConfig = {};
+
+async function saveTracking() {
+  const config = {
+    ga4: document.getElementById('track-ga4').value.trim(),
+    gads: document.getElementById('track-gads').value.trim(),
+    gtm: document.getElementById('track-gtm').value.trim(),
+    yandex: document.getElementById('track-yandex').value.trim(),
+    metapixel: document.getElementById('track-metapixel').value.trim(),
+    tiktok: document.getElementById('track-tiktok').value.trim(),
+    customhead: document.getElementById('track-customhead').value.trim()
+  };
+  // Basic validation — IDs shouldn't contain obvious script-breaking chars (except customhead)
+  for (const [k,v] of Object.entries(config)) {
+    if (k === 'customhead') continue;
+    if (v && /[<>"']/.test(v)) { showToast('Invalid characters in ' + k + ' — paste only the ID'); return; }
+  }
+  try {
+    const res = await fetch(WORKER_URL + '/tracking', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ tracking: config })
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error); return; }
+    trackingConfig = config;
+    showToast('Tracking codes saved! Reload the site to activate.');
+  } catch(e) {
+    showToast('Could not save tracking codes');
+  }
+}
+
+async function loadTrackingSettings() {
+  try {
+    const res = await fetch(WORKER_URL + '/tracking', { headers: { 'X-Admin-Password': adminPassword } });
+    const data = await res.json();
+    const t = data.tracking || {};
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    set('track-ga4', t.ga4); set('track-gads', t.gads); set('track-gtm', t.gtm);
+    set('track-yandex', t.yandex); set('track-metapixel', t.metapixel);
+    set('track-tiktok', t.tiktok); set('track-customhead', t.customhead);
+  } catch(e) {}
+}
+
+// Inject tracking scripts on every page load (for all visitors)
+async function injectTracking() {
+  try {
+    const res = await fetch(WORKER_URL + '/tracking-public');
+    const data = await res.json();
+    const t = data.tracking || {};
+    if (!t || Object.keys(t).length === 0) return;
+
+    // Google Tag (gtag.js) — used by GA4 and Google Ads
+    const gtagId = t.ga4 || t.gads;
+    if (gtagId) {
+      const s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gtagId);
+      document.head.appendChild(s);
+      window.dataLayer = window.dataLayer || [];
+      gtag('js', new Date());
+      if (t.ga4) gtag('config', t.ga4);
+      if (t.gads) gtag('config', t.gads);
+    }
+
+    // Google Tag Manager
+    if (t.gtm) {
+      (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
+      var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';
+      j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+      })(window,document,'script','dataLayer',t.gtm);
+    }
+
+    // Yandex Metrica
+    if (t.yandex) {
+      (function(m,e,t2,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();
+      k=e.createElement(t2),a=e.getElementsByTagName(t2)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+      (window,document,'script','https://mc.yandex.ru/metrika/tag.js','ym');
+      ym(Number(t.yandex), 'init', { clickmap:true, trackLinks:true, accurateTrackBounce:true, ecommerce:'dataLayer' });
+    }
+
+    // Meta (Facebook) Pixel
+    if (t.metapixel) {
+      !function(f,b,e,v,n,t2,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+      n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t2=b.createElement(e);t2.async=!0;
+      t2.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t2,s)}(window,document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', t.metapixel); fbq('track', 'PageView');
+    }
+
+    // TikTok Pixel
+    if (t.tiktok) {
+      !function(w,d,t2){w.TiktokAnalyticsObject=t2;var ttq=w[t2]=w[t2]||[];
+      ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];
+      ttq.setAndDefer=function(t3,e){t3[e]=function(){t3.push([e].concat(Array.prototype.slice.call(arguments,0)))}};
+      for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
+      ttq.instance=function(t3){for(var e=ttq._i[t3]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};
+      ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=d.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t2;var a=d.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
+      ttq.load(t.tiktok);ttq.page();}(window,document,'ttq');
+    }
+
+    // Custom head code
+    if (t.customhead) {
+      const div = document.createElement('div');
+      div.innerHTML = t.customhead;
+      Array.from(div.childNodes).forEach(node => {
+        if (node.tagName === 'SCRIPT') {
+          const s = document.createElement('script');
+          if (node.src) s.src = node.src;
+          else s.textContent = node.textContent;
+          document.head.appendChild(s);
+        } else {
+          document.head.appendChild(node);
+        }
+      });
+    }
+  } catch(e) {}
+}
+
 async function importShopifyCSV() {
   const fileInput = document.getElementById('import-csv-file');
   const progress = document.getElementById('import-progress');
@@ -4488,6 +4743,7 @@ updateAuthUI();
 loadProductsFromServer();
 loadPagesFromServer();
 loadPaymentLimits();
+injectTracking();
 handlePaymentRedirect();
 
 // Route to correct page based on current URL path
