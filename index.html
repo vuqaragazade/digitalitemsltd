@@ -3087,6 +3087,7 @@ function updateOrderTotalWithTip() {
     }
   }
   if (totalEl) totalEl.textContent = '$' + orderTotalWithTip().toFixed(2);
+  refreshLimitWarning();
 }
 
 function updateCartUI() {
@@ -3190,6 +3191,12 @@ function renderCheckout() {
   }
 
   // Show payment limit warning and disable pay buttons if out of range
+  refreshLimitWarning();
+}
+
+function refreshLimitWarning() {
+  const el = document.getElementById('order-summary');
+  if (!el) return;
   const limitErr = checkCartLimits();
   const payBtn = document.getElementById('pay-btn');
   const cryptoBtn = document.getElementById('pay-crypto-btn');
@@ -4627,11 +4634,12 @@ async function loadPaymentLimits() {
 
 // Returns error string if cart total is out of allowed range, else null
 function checkCartLimits() {
-  const total = cartTotal();
+  const total = orderTotalWithTip(); // include tip so a tip can help reach the minimum
   const min = Number(paymentLimits.min) || 0;
   const max = Number(paymentLimits.max) || 0;
   if (min > 0 && total < min) {
-    return `Minimum order is $${min.toFixed(2)}. Add $${(min-total).toFixed(2)} more to checkout.`;
+    const short = min - total;
+    return `Minimum order is $${min.toFixed(2)}. Add $${short.toFixed(2)} more (products or a tip) to checkout.`;
   }
   if (max > 0 && total > max) {
     return `Maximum order is $${max.toFixed(2)}. Please reduce your cart or contact us for large orders.`;
