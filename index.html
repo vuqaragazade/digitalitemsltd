@@ -2758,24 +2758,34 @@ function recordSale(items) {
 
 function getTopSellers() {
   const sales = getSalesData();
-  // Get best seller per category
-  const cats = ['twitter','reddit','marketing'];
-  const top = [];
-  cats.forEach(cat => {
-    const inCat = allProducts.filter(p => p.category === cat);
-    inCat.sort((a,b) => (sales[b.id]||0) - (sales[a.id]||0));
-    if (inCat[0]) top.push({...inCat[0], sold: sales[inCat[0].id]||0});
+  // Find the single best seller across all products (for the ★ badge)
+  let bestSeller = null;
+  let bestCount = -1;
+  allProducts.forEach(p => {
+    const s = sales[p.id] || 0;
+    if (s > bestCount) { bestCount = s; bestSeller = p; }
   });
-  // If no sales yet, use sensible defaults (curated popular)
-  const hasSales = Object.keys(sales).length > 0;
-  if (!hasSales) {
-    return [
-      allProducts.find(p=>p.id==='t13'),
-      allProducts.find(p=>p.id==='r6'),
-      allProducts.find(p=>p.id==='m1'),
-    ].filter(Boolean).map(p => ({...p, sold: 0}));
+
+  // Build a shuffled mix of products
+  const pool = allProducts.filter(p => {
+    // Exclude out-of-stock items from featured
+    const isUnlimited = (p.stock === undefined || p.stock === null);
+    return isUnlimited || p.stock > 0;
+  });
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+
+  // Put best seller first (if it has sales), then fill with random others
+  const result = [];
+  const hasSales = Object.keys(sales).length > 0 && bestCount > 0;
+  if (hasSales && bestSeller) {
+    result.push({ ...bestSeller, sold: bestCount });
   }
-  return top;
+  for (const p of shuffled) {
+    if (result.length >= 12) break;
+    if (hasSales && bestSeller && p.id === bestSeller.id) continue; // already added
+    result.push({ ...p, sold: sales[p.id] || 0 });
+  }
+  return result;
 }
 
 function renderFeatured() {
