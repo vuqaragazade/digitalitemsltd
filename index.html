@@ -1675,6 +1675,21 @@
       <div class="checkout-box">
         <h2>Order Summary</h2>
         <div class="order-summary-items" id="order-summary"></div>
+        <div style="padding:16px 0;border-top:1px solid var(--border)">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Add a tip (optional)</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="tip-buttons">
+            <button type="button" class="tip-btn" data-tip="0" onclick="setTip(0,this)" style="flex:1;min-width:54px;padding:9px;border-radius:8px;border:1px solid var(--accent1);background:var(--accent1);color:#fff;font-size:13px;font-weight:600;cursor:pointer">None</button>
+            <button type="button" class="tip-btn" data-tip="1" onclick="setTip(1,this)" style="flex:1;min-width:54px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">$1</button>
+            <button type="button" class="tip-btn" data-tip="3" onclick="setTip(3,this)" style="flex:1;min-width:54px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">$3</button>
+            <button type="button" class="tip-btn" data-tip="5" onclick="setTip(5,this)" style="flex:1;min-width:54px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">$5</button>
+            <button type="button" class="tip-btn" data-tip="custom" onclick="setTip('custom',this)" style="flex:1;min-width:64px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">Custom</button>
+          </div>
+          <input type="number" id="tip-custom" min="0" step="0.01" placeholder="Enter tip amount" oninput="setCustomTip(this.value)" style="display:none;width:100%;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+        </div>
+        <div class="order-total-row" id="tip-row" style="display:none">
+          <span class="label" style="font-weight:400;color:var(--muted)">Tip</span>
+          <span style="color:var(--muted)" id="tip-display">$0.00</span>
+        </div>
         <div class="order-total-row">
           <span class="label">Total</span>
           <span class="total-amount" id="order-total">$0.00</span>
@@ -3011,6 +3026,69 @@ function saveCart() { localStorage.setItem('di_cart', JSON.stringify(cart)); }
 
 function cartTotal() { return cart.reduce((s, c) => s + c.price * c.qty, 0); }
 
+// ════════════════════════════════════════
+// TIP
+// ════════════════════════════════════════
+let currentTip = 0;
+
+function setTip(amount, btn) {
+  const customInput = document.getElementById('tip-custom');
+  // Reset all button styles
+  document.querySelectorAll('.tip-btn').forEach(b => {
+    b.style.background = 'var(--bg3)';
+    b.style.color = 'var(--text)';
+    b.style.borderColor = 'var(--border)';
+  });
+  // Highlight selected
+  if (btn) {
+    btn.style.background = 'var(--accent1)';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'var(--accent1)';
+  }
+  if (amount === 'custom') {
+    customInput.style.display = 'block';
+    customInput.focus();
+    currentTip = parseFloat(customInput.value) || 0;
+  } else {
+    customInput.style.display = 'none';
+    currentTip = amount;
+  }
+  updateOrderTotalWithTip();
+}
+
+function setCustomTip(val) {
+  currentTip = parseFloat(val) || 0;
+  updateOrderTotalWithTip();
+}
+
+function orderTotalWithTip() {
+  return cartTotal() + currentTip;
+}
+
+// Build order items array including tip as a line item (if any)
+function buildOrderItems() {
+  const items = cart.map(c => ({name: c.name, qty: c.qty, price: c.price}));
+  if (currentTip > 0) {
+    items.push({ name: 'Tip', qty: 1, price: currentTip });
+  }
+  return items;
+}
+
+function updateOrderTotalWithTip() {
+  const tipRow = document.getElementById('tip-row');
+  const tipDisplay = document.getElementById('tip-display');
+  const totalEl = document.getElementById('order-total');
+  if (tipRow && tipDisplay) {
+    if (currentTip > 0) {
+      tipRow.style.display = 'flex';
+      tipDisplay.textContent = '$' + currentTip.toFixed(2);
+    } else {
+      tipRow.style.display = 'none';
+    }
+  }
+  if (totalEl) totalEl.textContent = '$' + orderTotalWithTip().toFixed(2);
+}
+
 function updateCartUI() {
   const count = cart.reduce((s, c) => s + c.qty, 0);
   const countEl = document.getElementById('cart-count');
@@ -3090,6 +3168,18 @@ function renderCheckout() {
     </div>
   `).join('');
   document.getElementById('order-total').textContent = '$' + cartTotal().toFixed(2);
+  // Reset tip selection on checkout render
+  currentTip = 0;
+  const tipRow = document.getElementById('tip-row');
+  if (tipRow) tipRow.style.display = 'none';
+  const tipCustom = document.getElementById('tip-custom');
+  if (tipCustom) { tipCustom.style.display = 'none'; tipCustom.value = ''; }
+  document.querySelectorAll('.tip-btn').forEach((b,i) => {
+    const isNone = b.getAttribute('data-tip') === '0';
+    b.style.background = isNone ? 'var(--accent1)' : 'var(--bg3)';
+    b.style.color = isNone ? '#fff' : 'var(--text)';
+    b.style.borderColor = isNone ? 'var(--accent1)' : 'var(--border)';
+  });
   // Track begin_checkout (once per checkout view)
   if (cart.length && !window._checkoutTracked) {
     window._checkoutTracked = true;
@@ -3266,7 +3356,7 @@ async function processCryptoPayment() {
   btn.innerHTML = '<span class="spinner"></span> Creating invoice...';
 
   const orderId = 'ORD-' + Math.random().toString(36).substr(2,8).toUpperCase();
-  const total = cartTotal();
+  const total = orderTotalWithTip();
 
   trackEvent('add_payment_info', {
     currency: 'USD', value: total, payment_type: 'Crypto',
@@ -3293,7 +3383,7 @@ async function processCryptoPayment() {
         email,
         name,
         telegram: document.getElementById('co-tg').value.trim(),
-        items: cart.map(c => ({name: c.name, qty: c.qty, price: c.price}))
+        items: buildOrderItems()
       })
     });
     const data = await res.json();
@@ -3334,7 +3424,7 @@ async function processPayment() {
   btn.innerHTML = '<span class="spinner"></span> Creating payment...';
 
   const orderId = 'ORD-' + Math.random().toString(36).substr(2,8).toUpperCase();
-  const total = cartTotal();
+  const total = orderTotalWithTip();
 
   // Track payment info entered (card)
   trackEvent('add_payment_info', {
@@ -3352,7 +3442,7 @@ async function processPayment() {
     id: orderId,
     name, email,
     telegram: document.getElementById('co-tg').value.trim(),
-    items: cart.map(c => ({name: c.name, qty: c.qty, price: c.price})),
+    items: buildOrderItems(),
     total,
     status: 'pending',
     date: new Date().toISOString()
@@ -3385,7 +3475,7 @@ async function processPayment() {
           email,
           name,
           telegram: document.getElementById('co-tg').value.trim(),
-          items: cart.map(c => ({name: c.name, qty: c.qty, price: c.price}))
+          items: buildOrderItems()
         })
       });
       const data = await res.json();
