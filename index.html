@@ -2952,13 +2952,17 @@ function navigateBack() {
 // ════════════════════════════════════════
 function trackEvent(eventName, ecommerce) {
   try {
+    // For GTM users: push to dataLayer
     window.dataLayer = window.dataLayer || [];
-    // Clear previous ecommerce object (GA4 best practice)
     window.dataLayer.push({ ecommerce: null });
     window.dataLayer.push({
       event: eventName,
       ecommerce: ecommerce
     });
+    // For direct GA4 (gtag.js without GTM): send via gtag
+    if (typeof gtag === 'function') {
+      gtag('event', eventName, ecommerce || {});
+    }
   } catch(e) {}
 }
 
