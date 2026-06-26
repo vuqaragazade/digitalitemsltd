@@ -4359,7 +4359,7 @@ function showCookieBanner() {
     <div style="position:fixed;bottom:0;left:0;right:0;z-index:9998;background:var(--bg2,#16161a);border-top:1px solid var(--border,#2a2a32);padding:18px 20px;box-shadow:0 -4px 24px rgba(0,0,0,0.3)">
       <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:space-between">
         <div style="flex:1;min-width:280px;font-size:13px;color:var(--muted,#9a9aa5);line-height:1.6">
-          We use cookies to improve your experience, analyze traffic, and for marketing. By clicking "Accept", you consent to our use of cookies. See our <a href="/privacy-policy" onclick="navigate('privacy-policy');closeCookieBanner();return false;" style="color:var(--accent1,#ff6b35)">Privacy Policy</a>.
+          We use cookies to improve your experience, analyze traffic, and for marketing. By continuing to use this site, you consent to our use of cookies. See our <a href="/privacy-policy" onclick="navigate('privacy-policy');closeCookieBanner();return false;" style="color:var(--accent1,#ff6b35)">Privacy Policy</a>.
         </div>
         <div style="display:flex;gap:10px;flex-shrink:0">
           <button onclick="declineCookies()" style="padding:10px 20px;border-radius:8px;border:1px solid var(--border,#2a2a32);background:transparent;color:var(--text,#f0f0f5);font-size:13px;font-weight:600;cursor:pointer">Decline</button>
@@ -4931,8 +4931,8 @@ updateAuthUI();
 loadProductsFromServer();
 loadPagesFromServer();
 loadPaymentLimits();
-// GDPR: only inject tracking if user has consented
-if (localStorage.getItem('di_cookie_consent') === 'accepted') {
+// Soft consent (implied): tracking runs unless the user explicitly declined
+if (localStorage.getItem('di_cookie_consent') !== 'declined') {
   injectTracking();
 }
 initCookieConsent();
