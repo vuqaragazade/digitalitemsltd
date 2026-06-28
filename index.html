@@ -4027,28 +4027,60 @@ async function renderAnalytics() {
 
 function renderAdminProducts() {
   const el = document.getElementById('admin-products-list');
-  // Compute sold counts from all orders (includes imported Shopify orders)
-  const soldCounts = {};
+  // Normalize a name into a sorted set of meaningful tokens (handles word-order + punctuation differences)
+  const tokenSet = (s) => {
+    const stop = new Set(['aged','account','accounts','with','and','the','a','buy','year','created','high','quality']);
+    return (s||'')
+      .toLowerCase()
+      .replace(/[~–—\-,._/]/g, ' ')
+      .replace(/(\d+)\s*k\b/g, '$1k')       // keep "3k" together
+      .replace(/[^a-z0-9+ ]/g, ' ')
+      .split(/\s+/)
+      .filter(t => t && !stop.has(t))
+      .sort();
+  };
+  const setKey = (s) => tokenSet(s).join(' ');
+
+  // Each order item is matched to exactly ONE product (best token overlap) to avoid double counting
+  const productKeys = allProducts.map(p => ({ id: p.id, key: setKey(p.name), tokens: new Set(tokenSet(p.name)) }));
+
+  const sold = {};
+  productKeys.forEach(pk => sold[pk.id] = 0);
+
   (adminOrders || []).forEach(o => {
-    // Only count orders that represent real sales (paid or delivered)
-    if (o.status === 'paid' || o.status === 'delivered') {
-      (o.items || []).forEach(it => {
-        const key = (it.name || '').trim().toLowerCase();
-        if (key && key !== 'tip') soldCounts[key] = (soldCounts[key] || 0) + (it.qty || 1);
-      });
-    }
+    if (o.status !== 'paid' && o.status !== 'delivered') return;
+    (o.items || []).forEach(it => {
+      const nm = (it.name||'').trim();
+      if (!nm || nm.toLowerCase() === 'tip') return;
+      const oTokens = new Set(tokenSet(nm));
+      const oKey = setKey(nm);
+      // Find best-matching product
+      let best = null, bestScore = 0;
+      for (const pk of productKeys) {
+        if (pk.key === oKey) { best = pk; bestScore = 999; break; } // exact token-set match
+        // Score = number of shared tokens, require platform/number tokens to align
+        let shared = 0;
+        oTokens.forEach(t => { if (pk.tokens.has(t)) shared++; });
+        // Require a strong overlap relative to the smaller set
+        const minSize = Math.min(oTokens.size, pk.tokens.size) || 1;
+        const ratio = shared / minSize;
+        if (ratio >= 0.8 && shared > bestScore) { best = pk; bestScore = shared; }
+      }
+      if (best) sold[best.id] += (it.qty || 1);
+    });
   });
+
   el.innerHTML = allProducts.map(p => {
     const isUnlimited = (p.stock === undefined || p.stock === null);
     const stockLabel = isUnlimited ? '<span style="color:var(--muted)">∞</span>' : (p.stock > 0 ? '<span style="color:#4ade80">'+p.stock+'</span>' : '<span style="color:#f87171">0</span>');
-    const sold = soldCounts[(p.name || '').trim().toLowerCase()] || 0;
+    const soldCount = sold[p.id] || 0;
     return `
     <div class="admin-table-row" style="grid-template-columns:1fr 100px 80px 55px 60px 80px">
       <span>${p.name}</span>
       <span style="color:var(--muted)">${p.category}</span>
       <span style="color:var(--accent1);font-weight:600">$${p.price.toFixed(2)}</span>
       <span style="text-align:center">${stockLabel}</span>
-      <span style="text-align:center;font-weight:600">${sold}</span>
+      <span style="text-align:center;font-weight:600">${soldCount}</span>
       <div style="display:flex;gap:6px">
         <button onclick="editProduct('${p.id}')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">Edit</button>
         <button onclick="deleteProduct('${p.id}')" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">Del</button>
