@@ -2082,8 +2082,8 @@
             <button class="btn btn-primary" onclick="openAddProduct()">+ Add Product</button>
           </div>
           <div class="admin-table">
-            <div class="admin-table-head" style="grid-template-columns:1fr 110px 90px 60px 80px">
-              <span>Name</span><span>Category</span><span>Price</span><span>Stock</span><span>Actions</span>
+            <div class="admin-table-head" style="grid-template-columns:1fr 100px 80px 55px 60px 80px">
+              <span>Name</span><span>Category</span><span>Price</span><span>Stock</span><span>Sold</span><span>Actions</span>
             </div>
             <div id="admin-products-list"></div>
           </div>
@@ -3777,7 +3777,7 @@ function adminTab(tab, evt) {
   if (clicked) clicked.classList.add('active');
   if (tab === 'orders') { restoreOrderPrefs(); renderAdminOrders(null); }
   if (tab === 'analytics') renderAnalytics();
-  if (tab === 'products') renderAdminProducts();
+  if (tab === 'products') { if (!adminOrders || adminOrders.length === 0) { renderAdminOrders(null).then(()=>renderAdminProducts()); } else { renderAdminProducts(); } }
   if (tab === 'pages') renderAdminPages();
   if (tab === 'users') renderAdminUsers();
   if (tab === 'profile') loadAdminProfile();
@@ -4027,15 +4027,28 @@ async function renderAnalytics() {
 
 function renderAdminProducts() {
   const el = document.getElementById('admin-products-list');
+  // Compute sold counts from all orders (includes imported Shopify orders)
+  const soldCounts = {};
+  (adminOrders || []).forEach(o => {
+    // Only count orders that represent real sales (paid or delivered)
+    if (o.status === 'paid' || o.status === 'delivered') {
+      (o.items || []).forEach(it => {
+        const key = (it.name || '').trim().toLowerCase();
+        if (key && key !== 'tip') soldCounts[key] = (soldCounts[key] || 0) + (it.qty || 1);
+      });
+    }
+  });
   el.innerHTML = allProducts.map(p => {
     const isUnlimited = (p.stock === undefined || p.stock === null);
     const stockLabel = isUnlimited ? '<span style="color:var(--muted)">∞</span>' : (p.stock > 0 ? '<span style="color:#4ade80">'+p.stock+'</span>' : '<span style="color:#f87171">0</span>');
+    const sold = soldCounts[(p.name || '').trim().toLowerCase()] || 0;
     return `
-    <div class="admin-table-row" style="grid-template-columns:1fr 110px 90px 60px 80px">
+    <div class="admin-table-row" style="grid-template-columns:1fr 100px 80px 55px 60px 80px">
       <span>${p.name}</span>
       <span style="color:var(--muted)">${p.category}</span>
       <span style="color:var(--accent1);font-weight:600">$${p.price.toFixed(2)}</span>
       <span style="text-align:center">${stockLabel}</span>
+      <span style="text-align:center;font-weight:600">${sold}</span>
       <div style="display:flex;gap:6px">
         <button onclick="editProduct('${p.id}')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">Edit</button>
         <button onclick="deleteProduct('${p.id}')" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">Del</button>
