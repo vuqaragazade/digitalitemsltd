@@ -2747,7 +2747,7 @@ function renderProducts(cat, containerId) {
     <div class="product-row"${outOfStock?' style="opacity:0.55"':''}>
       <div style="cursor:pointer" onclick="openProduct('${p.id}')">
         <div class="name">${p.name}</div>
-        <div class="tags"><span class="tag">${p.desc}</span>${outOfStock?'<span class="tag" style="color:#f87171">Out of Stock</span>':(!isUnlimited?'<span class="tag" style="color:#4ade80">'+p.stock+' left</span>':'')}</div>
+        <div class="tags"><span class="tag">${p.desc}</span>${outOfStock?'<span class="tag" style="color:#f87171">Out of Stock</span>':(!isUnlimited?'<span class="tag" style="color:#4ade80">'+p.stock+' left</span>':'')}${getProductSoldDisplay(p.id)?'<span class="tag" style="color:#fbbf24">🔥 '+getProductSoldDisplay(p.id)+' sold</span>':''}</div>
       </div>
       <div class="price">$${p.price.toFixed(2)}</div>
       ${outOfStock
@@ -2759,6 +2759,67 @@ function renderProducts(cat, containerId) {
 
 function getSalesData() {
   return JSON.parse(localStorage.getItem('di_sales') || '{}');
+}
+
+// ════════════════════════════════════════
+// PUBLIC SOLD COUNTS (social proof on product pages)
+// ════════════════════════════════════════
+let publicSoldCounts = {};       // raw: order item name -> qty
+let productSoldCache = {};       // product id -> matched sold count
+
+async function loadSoldCounts() {
+  try {
+    const res = await fetch(WORKER_URL + '/sold-counts');
+    const data = await res.json();
+    publicSoldCounts = data.counts || {};
+    computeProductSold();
+  } catch(e) { publicSoldCounts = {}; }
+}
+
+// Token-set matcher (same logic as admin) to map order names -> products
+function _soldTokenSet(s) {
+  const stop = new Set(['aged','account','accounts','with','and','the','a','buy','year','created','high','quality']);
+  return (s||'')
+    .toLowerCase()
+    .replace(/[~–—\-,._/]/g, ' ')
+    .replace(/(\d+)\s*k\b/g, '$1k')
+    .replace(/[^a-z0-9+ ]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t && !stop.has(t))
+    .sort();
+}
+
+function computeProductSold() {
+  productSoldCache = {};
+  if (!allProducts || !allProducts.length) return;
+  const productKeys = allProducts.map(p => {
+    const toks = _soldTokenSet(p.name);
+    return { id: p.id, key: toks.join(' '), tokens: new Set(toks) };
+  });
+  productKeys.forEach(pk => productSoldCache[pk.id] = 0);
+  for (const [orderName, qty] of Object.entries(publicSoldCounts)) {
+    const oToks = _soldTokenSet(orderName);
+    const oKey = oToks.join(' ');
+    const oSet = new Set(oToks);
+    let best = null, bestScore = 0;
+    for (const pk of productKeys) {
+      if (pk.key === oKey) { best = pk; bestScore = 999; break; }
+      let shared = 0;
+      oSet.forEach(t => { if (pk.tokens.has(t)) shared++; });
+      const minSize = Math.min(oSet.size, pk.tokens.size) || 1;
+      if (shared / minSize >= 0.8 && shared > bestScore) { best = pk; bestScore = shared; }
+    }
+    if (best) productSoldCache[best.id] += (qty || 1);
+  }
+  // Re-render any visible product views with the new data
+  const cur = (typeof currentPage !== 'undefined') ? currentPage : '';
+  if (cur === 'home') { if (typeof renderFeatured === 'function') renderFeatured(); }
+}
+
+// Returns sold count for display, or 0 if below the visibility threshold
+function getProductSoldDisplay(productId) {
+  const n = productSoldCache[productId] || 0;
+  return n >= 5 ? n : 0; // hide if fewer than 5
 }
 
 function recordSale(items) {
@@ -2900,6 +2961,7 @@ function openProduct(id, skipPush) {
       <h1>${p.name}</h1>
       <div class="product-detail-price">$${p.price.toFixed(2)}</div>
       ${stockBadge}
+      ${getProductSoldDisplay(p.id) ? `<div style="display:inline-flex;align-items:center;gap:6px;color:#fbbf24;font-size:13px;font-weight:600;margin-bottom:14px;margin-left:14px">🔥 ${getProductSoldDisplay(p.id)}+ sold</div>` : ''}
       <div class="product-spec">${specRows}</div>
       ${buyControls}
       <div class="product-detail-desc">${desc}</div>
@@ -4974,6 +5036,7 @@ function handlePaymentRedirect() {
 updateCartUI();
 updateAuthUI();
 loadProductsFromServer();
+loadSoldCounts();
 loadPagesFromServer();
 loadPaymentLimits();
 // Soft consent (implied): tracking runs unless the user explicitly declined
