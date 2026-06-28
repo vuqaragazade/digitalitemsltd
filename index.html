@@ -2106,9 +2106,10 @@
         <!-- Users Tab -->
         <div id="admin-users-tab" style="display:none">
           <div class="admin-title">Users</div>
+          <input type="text" id="user-search" oninput="renderAdminUsers()" placeholder="Search by email or name..." style="width:100%;max-width:360px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;margin-bottom:16px" />
           <div class="admin-table">
-            <div class="admin-table-head" style="grid-template-columns:1fr 120px 80px">
-              <span>Email</span><span>Registered</span><span>Orders</span>
+            <div class="admin-table-head" style="grid-template-columns:1fr 110px 70px 90px 70px">
+              <span>Email</span><span>Registered</span><span>Orders</span><span>Spent</span><span></span>
             </div>
             <div id="admin-users-list"></div>
           </div>
@@ -4151,26 +4152,160 @@ function renderAdminProducts() {
   }).join('');
 }
 
+let allUsers = [];
 async function renderAdminUsers() {
   const el = document.getElementById('admin-users-list');
   el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">Loading...</div>';
   try {
-    const res = await fetch(WORKER_URL + '/users', { headers: { 'X-Admin-Password': adminPassword } });
-    const data = await res.json();
-    const users = data.users || [];
-    if (users.length === 0) {
+    // Load users (cache) + ensure orders are available for stats
+    if (!allUsers.length) {
+      const res = await fetch(WORKER_URL + '/users', { headers: { 'X-Admin-Password': adminPassword } });
+      const data = await res.json();
+      allUsers = data.users || [];
+    }
+    if (!adminOrders || !adminOrders.length) {
+      await renderAdminOrders(null);
+    }
+    if (allUsers.length === 0) {
       el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">No users yet</div>';
       return;
     }
-    el.innerHTML = users.map(u => `
-      <div class="admin-table-row" style="grid-template-columns:1fr 120px 80px">
+    // Compute per-user stats from orders (by email)
+    const stats = {};
+    (adminOrders || []).forEach(o => {
+      const email = (o.email || '').toLowerCase();
+      if (!email) return;
+      if (!stats[email]) stats[email] = { orders: 0, spent: 0 };
+      stats[email].orders++;
+      if (o.status === 'paid' || o.status === 'delivered') {
+        stats[email].spent += (o.total || 0);
+      }
+    });
+
+    // Search filter
+    const term = ((document.getElementById('user-search')||{}).value || '').toLowerCase().trim();
+    let users = allUsers.filter(u => {
+      if (!term) return true;
+      return (u.email + ' ' + (u.name||'')).toLowerCase().includes(term);
+    });
+    // Sort by spent (highest first)
+    users.sort((a,b) => (stats[(b.email||'').toLowerCase()]?.spent||0) - (stats[(a.email||'').toLowerCase()]?.spent||0));
+
+    el.innerHTML = users.map(u => {
+      const s = stats[(u.email||'').toLowerCase()] || { orders: 0, spent: 0 };
+      return `
+      <div class="admin-table-row" style="grid-template-columns:1fr 110px 70px 90px 70px;cursor:pointer" onclick="openUserDetail('${(u.email||'').replace(/'/g,'')}')">
         <span>${u.email}<br><span style="font-size:11px;color:var(--muted)">${u.name||''}</span></span>
-        <span style="color:var(--muted);font-size:12px">${new Date(u.registered).toLocaleDateString()}</span>
-        <span>—</span>
-      </div>
-    `).join('');
+        <span style="color:var(--muted);font-size:12px">${u.registered ? new Date(u.registered).toLocaleDateString() : '—'}</span>
+        <span style="text-align:center">${s.orders}</span>
+        <span style="color:var(--accent1);font-weight:600;font-size:13px">$${s.spent.toFixed(2)}</span>
+        <span style="text-align:center;color:var(--muted);font-size:11px">View ›</span>
+      </div>`;
+    }).join('');
   } catch(e) {
     el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">Could not load users</div>';
+  }
+}
+
+// User detail modal: shows their orders, total spent, and edit profile
+function openUserDetail(email) {
+  const user = allUsers.find(u => (u.email||'').toLowerCase() === email.toLowerCase()) || { email };
+  const userOrders = (adminOrders || []).filter(o => (o.email||'').toLowerCase() === email.toLowerCase());
+  userOrders.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+  const totalSpent = userOrders.filter(o => o.status==='paid'||o.status==='delivered').reduce((s,o)=>s+(o.total||0),0);
+  const paidCount = userOrders.filter(o => o.status==='paid'||o.status==='delivered').length;
+
+  const ordersHtml = userOrders.length ? userOrders.map(o => `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <div>
+        <span style="font-family:monospace;color:var(--muted);font-size:11px">${o.id}</span><br>
+        <span style="font-size:12px">${(o.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</span>
+      </div>
+      <div style="text-align:right;white-space:nowrap;margin-left:12px">
+        <span style="color:var(--accent1);font-weight:600">$${(o.total||0).toFixed(2)}</span><br>
+        <span class="status-badge status-${o.status}" style="font-size:10px">${o.status}</span>
+      </div>
+    </div>
+  `).join('') : '<div style="color:var(--muted);font-size:13px;padding:12px 0">No orders yet</div>';
+
+  const modal = document.createElement('div');
+  modal.id = 'user-detail-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.onclick = (e) => { if (e.target === modal) closeUserDetail(); };
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);max-width:560px;width:100%;max-height:85vh;overflow-y:auto;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+        <div>
+          <h2 style="font-family:var(--font-display);font-size:18px;font-weight:600;margin:0">${user.name||'Customer'}</h2>
+          <div style="color:var(--muted);font-size:13px;margin-top:4px">${user.email}</div>
+        </div>
+        <button onclick="closeUserDetail()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px">×</button>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-bottom:24px">
+        <div style="flex:1;background:var(--bg3);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:700;color:var(--accent1)">$${totalSpent.toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Total Spent</div>
+        </div>
+        <div style="flex:1;background:var(--bg3);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:700">${paidCount}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Paid Orders</div>
+        </div>
+        <div style="flex:1;background:var(--bg3);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:22px;font-weight:700">${userOrders.length}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Total Orders</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">Edit Profile</h3>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <input type="text" id="ud-name" value="${(user.name||'').replace(/"/g,'&quot;')}" placeholder="Full name" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
+          <input type="text" id="ud-phone" value="${(user.phone||'').replace(/"/g,'&quot;')}" placeholder="Phone" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
+          <input type="text" id="ud-telegram" value="${(user.telegram||'').replace(/"/g,'&quot;')}" placeholder="Telegram" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
+          <button onclick="saveUserProfile('${(user.email||'').replace(/'/g,'')}')" class="btn btn-primary" style="align-self:flex-start">Save Profile</button>
+          <div id="ud-save-status" style="font-size:12px;color:var(--muted)"></div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">Order History (${userOrders.length})</h3>
+        ${ordersHtml}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function closeUserDetail() {
+  const m = document.getElementById('user-detail-modal');
+  if (m) m.remove();
+}
+
+async function saveUserProfile(email) {
+  const status = document.getElementById('ud-save-status');
+  status.textContent = 'Saving...';
+  const payload = {
+    email,
+    name: document.getElementById('ud-name').value.trim(),
+    phone: document.getElementById('ud-phone').value.trim(),
+    telegram: document.getElementById('ud-telegram').value.trim()
+  };
+  try {
+    const res = await fetch(WORKER_URL + '/admin-update-user', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.error) { status.textContent = 'Error: ' + data.error; return; }
+    status.textContent = '✓ Saved';
+    // Update local cache
+    const u = allUsers.find(x => (x.email||'').toLowerCase() === email.toLowerCase());
+    if (u) { u.name = payload.name; u.phone = payload.phone; u.telegram = payload.telegram; }
+    renderAdminUsers();
+  } catch(e) {
+    status.textContent = 'Could not save';
   }
 }
 
