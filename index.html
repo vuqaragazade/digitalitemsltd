@@ -1694,6 +1694,15 @@
           <span class="label">Total</span>
           <span class="total-amount" id="order-total">$0.00</span>
         </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin:16px 0">
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 12px">
+            <strong style="color:var(--text)">⚠ No Refund Policy:</strong> All sales are final. Reddit accounts and digital products carry <strong style="color:var(--text)">no refunds and no replacements</strong>. If the product is delivered as described, no refund will be issued under any circumstances — including change of mind, or not liking the account's age or other characteristics. We clearly describe exactly what you are buying.
+          </p>
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text);line-height:1.5">
+            <input type="checkbox" id="accept-terms" onchange="refreshLimitWarning()" style="width:18px;height:18px;margin-top:1px;cursor:pointer;flex-shrink:0" />
+            <span>I have read and agree to the <a href="/terms" onclick="navigate('terms');return false;" style="color:var(--accent1)">Terms of Service</a> and <a href="/refund-policy" onclick="navigate('refund-policy');return false;" style="color:var(--accent1)">Refund Policy</a>, and I understand all sales are final.</span>
+          </label>
+        </div>
         <button class="pay-btn" id="pay-btn" onclick="processPayment()">
           🔒 Pay with Card
         </button>
@@ -1865,27 +1874,32 @@
   <div class="static-page">
     <h1>Refund Policy</h1>
     <div class="updated">DIGITALITEMS LTD</div>
-    <p>Our refund and returns policy lasts 2 days. If 2 days have passed since your purchase, we can't offer you a full refund or exchange.</p>
+
+    <div style="background:#ea580c15;border:1px solid #ea580c40;border-radius:10px;padding:16px;margin:16px 0">
+      <h2 style="margin-top:0;color:#fb923c">⚠ Important — Please Read Before Buying</h2>
+      <p style="margin-bottom:0"><strong>Reddit accounts are sold with absolutely no refunds and no replacements.</strong> For all other products, if the item is delivered exactly as described in the listing, <strong>no refund will be issued under any circumstances.</strong> This includes — but is not limited to — change of mind, not liking the account's age, karma, creation date, or any other characteristic that was clearly stated at the time of purchase. We describe precisely what you are buying, so please review each listing carefully before completing your order.</p>
+    </div>
+
+    <p>Our refund and returns policy lasts 2 days. If 2 days have passed since your purchase, we can't offer you a refund or exchange.</p>
     <h2>Non-Refundable Items</h2>
-    <p>As we sell digital products, the following are non-returnable:</p>
+    <p>As we sell digital products, the following are non-returnable and non-refundable:</p>
     <ul>
+      <li>Reddit accounts (no refund, no replacement — final sale)</li>
       <li>Gift cards</li>
-      <li>Downloadable software products</li>
-      <li>Digital products and accounts</li>
+      <li>Downloadable software and digital products</li>
+      <li>Any product delivered as described in its listing</li>
     </ul>
-    <p>To complete a refund request, we require a receipt or proof of purchase.</p>
-    <h2>Refunds for Digital Products</h2>
-    <p>If your items are not working, broken, or banned, we will send a replacement (except for Reddit accounts). If there are no accounts available for replacement, we will issue a refund.</p>
-    <h2>Refund Process</h2>
-    <p>Once your request is received and inspected, we will send you an email to notify you that we have received it. We will also notify you of the approval or rejection of your refund. If approved, your refund will be processed and a credit will automatically be applied to your original method of payment within a certain number of days.</p>
-    <h2>Late or Missing Refunds</h2>
-    <p>If you haven't received a refund yet, first check your bank account again. Then contact your credit card company — it may take some time before your refund is officially posted. Next, contact your bank, as there is often some processing time before a refund is posted. If you've done all of this and still have not received your refund, please contact us at <a href="mailto:admin@digitalitems.store" style="color:var(--accent1)">admin@digitalitems.store</a>.</p>
-    <h2>Sale Items</h2>
-    <p>Only regular-priced items may be refunded. Sale items cannot be refunded.</p>
-    <h2>Exchanges</h2>
-    <p>We only replace items if they are defective or damaged. If you need an exchange for the same item, send us an email at <a href="mailto:admin@digitalitems.store" style="color:var(--accent1)">admin@digitalitems.store</a>.</p>
+    <h2>Limited Replacement (Non-Reddit Products Only)</h2>
+    <p>If a non-Reddit account is dead on arrival (immediately non-functional or banned at the time of delivery, and not matching the description), we may at our sole discretion send a replacement. If no replacement is available, we may issue a refund. This does not apply to Reddit accounts, and does not apply where the product was delivered as described. Proof of the issue and proof of purchase are required.</p>
+    <h2>What Is NOT Grounds for a Refund</h2>
+    <ul>
+      <li>Changing your mind after purchase</li>
+      <li>Not liking the account's age, karma, creation year, or any stated characteristic</li>
+      <li>Buying the wrong product by mistake</li>
+      <li>Any issue arising from your own use, automation, or violation of a platform's terms after delivery</li>
+    </ul>
     <h2>Need Help?</h2>
-    <p>Contact us at <a href="mailto:admin@digitalitems.store" style="color:var(--accent1)">admin@digitalitems.store</a> for any questions related to refunds and returns.</p>
+    <p>Contact us at <a href="mailto:admin@digitalitems.store" style="color:var(--accent1)">admin@digitalitems.store</a> for any questions before you buy.</p>
   </div>
 </div>
 
@@ -3238,6 +3252,8 @@ function renderCheckout() {
   document.getElementById('order-total').textContent = '$' + cartTotal().toFixed(2);
   // Reset tip selection on checkout render
   currentTip = 0;
+  const acceptBox = document.getElementById('accept-terms');
+  if (acceptBox) acceptBox.checked = false;
   const tipRow = document.getElementById('tip-row');
   if (tipRow) tipRow.style.display = 'none';
   const tipCustom = document.getElementById('tip-custom');
@@ -3265,6 +3281,8 @@ function refreshLimitWarning() {
   const el = document.getElementById('order-summary');
   if (!el) return;
   const limitErr = checkCartLimits();
+  const termsBox = document.getElementById('accept-terms');
+  const termsAccepted = termsBox ? termsBox.checked : true;
   const payBtn = document.getElementById('pay-btn');
   const cryptoBtn = document.getElementById('pay-crypto-btn');
   let warnEl = document.getElementById('limit-warning');
@@ -3277,13 +3295,13 @@ function refreshLimitWarning() {
       if (box) box.insertBefore(warnEl, document.querySelector('.order-total-row'));
     }
     warnEl.textContent = '⚠ ' + limitErr;
-    if (payBtn) { payBtn.disabled = true; payBtn.style.opacity = '0.5'; }
-    if (cryptoBtn) { cryptoBtn.disabled = true; cryptoBtn.style.opacity = '0.5'; }
   } else {
     if (warnEl) warnEl.remove();
-    if (payBtn) { payBtn.disabled = false; payBtn.style.opacity = '1'; }
-    if (cryptoBtn) { cryptoBtn.disabled = false; cryptoBtn.style.opacity = '1'; }
   }
+  // Buttons enabled only if within limits AND terms accepted
+  const canPay = !limitErr && termsAccepted;
+  if (payBtn) { payBtn.disabled = !canPay; payBtn.style.opacity = canPay ? '1' : '0.5'; payBtn.style.cursor = canPay ? 'pointer' : 'not-allowed'; }
+  if (cryptoBtn) { cryptoBtn.disabled = !canPay; cryptoBtn.style.opacity = canPay ? '1' : '0.5'; cryptoBtn.style.cursor = canPay ? 'pointer' : 'not-allowed'; }
 }
 
 let pollTimer = null;
@@ -3422,6 +3440,8 @@ async function processCryptoPayment() {
   const email = document.getElementById('co-email').value.trim();
   if (!name || !email) { showToast('Please fill in your name and email'); return; }
   if (!email.includes('@')) { showToast('Please enter a valid email'); return; }
+  const termsBox = document.getElementById('accept-terms');
+  if (termsBox && !termsBox.checked) { showToast('Please accept the Terms and Refund Policy to continue'); return; }
   const limitErr = checkCartLimits();
   if (limitErr) { showToast(limitErr); return; }
 
@@ -3490,6 +3510,8 @@ async function processPayment() {
   const email = document.getElementById('co-email').value.trim();
   if (!name || !email) { showToast('Please fill in your name and email'); return; }
   if (!email.includes('@')) { showToast('Please enter a valid email'); return; }
+  const termsBox = document.getElementById('accept-terms');
+  if (termsBox && !termsBox.checked) { showToast('Please accept the Terms and Refund Policy to continue'); return; }
   const limitErr = checkCartLimits();
   if (limitErr) { showToast(limitErr); return; }
 
