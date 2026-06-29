@@ -2188,6 +2188,17 @@
             <div id="blog-publish-status" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
           </div>
 
+          <!-- Category management -->
+          <div class="checkout-box" style="max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:8px;padding-bottom:16px;border-bottom:1px solid var(--border)">Categories</h2>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Create categories to organize your blog. These appear in the generator dropdown and as filters on your blog page.</p>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+              <input type="text" id="new-category-input" placeholder="e.g. Guides" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px" onkeydown="if(event.key==='Enter')addBlogCategory()" />
+              <button class="btn btn-primary" onclick="addBlogCategory()" style="white-space:nowrap">Add</button>
+            </div>
+            <div id="blog-categories-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+          </div>
+
           <!-- Published posts -->
           <div class="checkout-box" style="max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px">
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">Published Posts</h2>
@@ -4331,10 +4342,21 @@ async function openBlogPost(slug, skipPush) {
     if (canon) canon.setAttribute('href', 'https://digitalitems.store/blog/' + b.slug);
     const img = b.image ? (b.image.startsWith('http') ? b.image : WORKER_URL + b.image) : '';
     const hashtags = (b.hashtags||[]).length ? `<div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">${b.hashtags.map(h=>`<span style="font-size:13px;color:var(--accent1)">${h}</span>`).join('')}</div>` : '';
+    // Count this view once per visitor per post (using localStorage to dedupe)
+    let viewCount = b.views || 0;
+    try {
+      const seenKey = 'di_blog_seen_' + slug;
+      if (!localStorage.getItem(seenKey)) {
+        localStorage.setItem(seenKey, '1');
+        const vr = await fetch(WORKER_URL + '/blog-view?slug=' + encodeURIComponent(slug), { method: 'POST' });
+        const vd = await vr.json();
+        if (vd && typeof vd.views === 'number') viewCount = vd.views;
+      }
+    } catch(e) {}
     el.innerHTML = `
       ${b.category ? `<span style="font-size:12px;color:var(--accent1);text-transform:uppercase;letter-spacing:0.5px">${b.category}</span>` : ''}
       <h1 style="margin:10px 0">${b.title}</h1>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${new Date(b.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${new Date(b.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} · 👁 ${viewCount} views</div>
       ${img ? `<img src="${img}" style="width:100%;border-radius:12px;margin-bottom:24px" alt="${b.title}" />` : ''}
       <div class="blog-body" style="line-height:1.7;font-size:16px">${b.content||''}</div>
       ${hashtags}
@@ -4447,33 +4469,107 @@ async function publishBlog() {
   }
 }
 
+let blogCategories = [];
+
+async function loadBlogCategories() {
+  try {
+    const res = await fetch(WORKER_URL + '/blog-categories');
+    const data = await res.json();
+    blogCategories = data.categories || [];
+  } catch(e) { blogCategories = []; }
+  renderCategoryChips();
+  // Populate the generator datalist
+  const dl = document.getElementById('blog-cat-list');
+  if (dl) dl.innerHTML = blogCategories.map(c => `<option value="${c}">`).join('');
+}
+
+function renderCategoryChips() {
+  const el = document.getElementById('blog-categories-list');
+  if (!el) return;
+  if (!blogCategories.length) {
+    el.innerHTML = '<span style="color:var(--muted);font-size:13px">No categories yet.</span>';
+    return;
+  }
+  el.innerHTML = blogCategories.map(c => `
+    <span style="display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:13px">
+      ${c}
+      <span onclick="deleteBlogCategory('${c.replace(/'/g,'')}')" style="cursor:pointer;color:#f87171;font-weight:700;font-size:15px;line-height:1">×</span>
+    </span>
+  `).join('');
+}
+
+async function saveBlogCategories() {
+  try {
+    await fetch(WORKER_URL + '/blog-categories', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ categories: blogCategories })
+    });
+  } catch(e) {}
+}
+
+async function addBlogCategory() {
+  const input = document.getElementById('new-category-input');
+  const val = input.value.trim();
+  if (!val) return;
+  if (!blogCategories.includes(val)) {
+    blogCategories.push(val);
+    await saveBlogCategories();
+    renderCategoryChips();
+    const dl = document.getElementById('blog-cat-list');
+    if (dl) dl.innerHTML = blogCategories.map(c => `<option value="${c}">`).join('');
+  }
+  input.value = '';
+}
+
+async function deleteBlogCategory(cat) {
+  if (!confirm('Delete category "' + cat + '"? Posts in it will become uncategorized.')) return;
+  blogCategories = blogCategories.filter(c => c !== cat);
+  await saveBlogCategories();
+  renderCategoryChips();
+  const dl = document.getElementById('blog-cat-list');
+  if (dl) dl.innerHTML = blogCategories.map(c => `<option value="${c}">`).join('');
+}
+
+async function changeBlogCategory(slug, category) {
+  try {
+    await fetch(WORKER_URL + '/blog-set-category', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ slug, category })
+    });
+  } catch(e) { showToast('Could not update category'); }
+}
+
 async function loadAdminBlogs() {
+  await loadBlogCategories();
   const el = document.getElementById('admin-blog-list');
   el.innerHTML = '<div style="color:var(--muted);font-size:13px">Loading...</div>';
   try {
     const res = await fetch(WORKER_URL + '/blogs');
     const data = await res.json();
     const blogs = data.blogs || [];
-    // Populate category datalist
-    const cats = [...new Set(blogs.map(b => b.category).filter(Boolean))];
-    const dl = document.getElementById('blog-cat-list');
-    if (dl) dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
     if (!blogs.length) {
       el.innerHTML = '<div style="color:var(--muted);font-size:13px">No posts yet. Generate your first one above.</div>';
       return;
     }
-    el.innerHTML = blogs.map(b => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+    el.innerHTML = blogs.map(b => {
+      const catOptions = ['<option value="">Uncategorized</option>']
+        .concat(blogCategories.map(c => `<option value="${c}" ${b.category===c?'selected':''}>${c}</option>`))
+        .join('');
+      return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);gap:12px">
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:14px">${b.title}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">${b.category||'Uncategorized'} · ${new Date(b.date).toLocaleDateString()} · /blog/${b.slug}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">👁 ${b.views||0} views · ${new Date(b.date).toLocaleDateString()} · /blog/${b.slug}</div>
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">
+        <select onchange="changeBlogCategory('${b.slug}', this.value)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;max-width:120px">${catOptions}</select>
+        <div style="display:flex;gap:6px;flex-shrink:0">
           <button onclick="window.open('/blog/${b.slug}','_blank')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px">View</button>
           <button onclick="deleteBlog('${b.slug}')" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px">Del</button>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   } catch(e) {
     el.innerHTML = '<div style="color:var(--muted);font-size:13px">Could not load posts</div>';
   }
