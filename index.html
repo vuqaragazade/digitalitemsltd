@@ -68,7 +68,8 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" /></noscript>
 
   <style>
     :root {
@@ -77,7 +78,7 @@
       --bg3: #1a1a1f;
       --border: #2a2a32;
       --text: #f0f0f5;
-      --muted: #7a7a8a;
+      --muted: #9a9aab;
       --accent1: #ff6b35;
       --accent2: #e8194b;
       --grad: linear-gradient(135deg, #ff6b35, #e8194b);
@@ -1662,15 +1663,15 @@
         <h2>Contact Information</h2>
         <div class="form-group">
           <label>Full Name</label>
-          <input type="text" id="co-name" placeholder="John Doe" />
+          <input aria-label="John Doe" type="text" id="co-name" placeholder="John Doe" />
         </div>
         <div class="form-group">
           <label>Email Address</label>
-          <input type="email" id="co-email" placeholder="john@example.com" />
+          <input aria-label="john@example.com" type="email" id="co-email" placeholder="john@example.com" />
         </div>
         <div class="form-group">
           <label>Telegram (optional)</label>
-          <input type="text" id="co-tg" placeholder="@username" />
+          <input aria-label="@username" type="text" id="co-tg" placeholder="@username" />
         </div>
       </div>
     </div>
@@ -1687,7 +1688,7 @@
             <button type="button" class="tip-btn" data-tip="5" onclick="setTip(5,this)" style="flex:1;min-width:54px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">$5</button>
             <button type="button" class="tip-btn" data-tip="custom" onclick="setTip('custom',this)" style="flex:1;min-width:64px;padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">Custom</button>
           </div>
-          <input type="number" id="tip-custom" min="0" step="0.01" placeholder="Enter tip amount" oninput="setCustomTip(this.value)" style="display:none;width:100%;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+          <input aria-label="Enter tip amount" type="number" id="tip-custom" min="0" step="0.01" placeholder="Enter tip amount" oninput="setCustomTip(this.value)" style="display:none;width:100%;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
         </div>
         <div class="order-total-row" id="tip-row" style="display:none">
           <span class="label" style="font-weight:400;color:var(--muted)">Tip</span>
@@ -1730,11 +1731,11 @@
       <div class="auth-sub">Sign in to your account</div>
       <div class="form-group">
         <label>Email</label>
-        <input type="email" id="login-email" placeholder="you@example.com" />
+        <input aria-label="you@example.com" type="email" id="login-email" placeholder="you@example.com" />
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="login-pass" placeholder="••••••••" />
+        <input aria-label="••••••••" type="password" id="login-pass" placeholder="••••••••" />
       </div>
       <button class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;margin-top:8px" onclick="doLogin()">Sign In</button>
       <div class="auth-switch">Don't have an account? <a onclick="navigate('register')">Create one</a></div>
@@ -1753,15 +1754,15 @@
       <div class="auth-sub">Join thousands of satisfied customers</div>
       <div class="form-group">
         <label>Full Name</label>
-        <input type="text" id="reg-name" placeholder="John Doe" />
+        <input aria-label="John Doe" type="text" id="reg-name" placeholder="John Doe" />
       </div>
       <div class="form-group">
         <label>Email</label>
-        <input type="email" id="reg-email" placeholder="you@example.com" />
+        <input aria-label="you@example.com" type="email" id="reg-email" placeholder="you@example.com" />
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="reg-pass" placeholder="Min. 8 characters" />
+        <input aria-label="Min. 8 characters" type="password" id="reg-pass" placeholder="Min. 8 characters" />
       </div>
       <button class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;margin-top:8px" onclick="doRegister()">Create Account</button>
       <div class="auth-switch">Already have an account? <a onclick="navigate('login')">Sign in</a></div>
@@ -1804,24 +1805,24 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div class="form-group">
             <label>First Name</label>
-            <input type="text" id="prof-name" placeholder="John" />
+            <input aria-label="John" type="text" id="prof-name" placeholder="John" />
           </div>
           <div class="form-group">
             <label>Last Name</label>
-            <input type="text" id="prof-lastname" placeholder="Doe" />
+            <input aria-label="Doe" type="text" id="prof-lastname" placeholder="Doe" />
           </div>
         </div>
         <div class="form-group">
           <label>Email</label>
-          <input type="email" id="prof-email" placeholder="you@example.com" disabled style="opacity:0.7" />
+          <input aria-label="you@example.com" type="email" id="prof-email" placeholder="you@example.com" disabled style="opacity:0.7" />
         </div>
         <div class="form-group">
           <label>Phone Number</label>
-          <input type="text" id="prof-phone" placeholder="+994 XX XXX XX XX" />
+          <input aria-label="+994 XX XXX XX XX" type="text" id="prof-phone" placeholder="+994 XX XXX XX XX" />
         </div>
         <div class="form-group">
           <label>Address</label>
-          <textarea id="prof-address" rows="3" placeholder="Street, City, Country" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
+          <textarea aria-label="Street, City, Country" id="prof-address" rows="3" placeholder="Street, City, Country" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
         </div>
         <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
       </div>
@@ -1932,19 +1933,19 @@
     <div class="checkout-box" style="margin-bottom:24px">
       <div class="form-group">
         <label>Your Name</label>
-        <input type="text" id="contact-name" placeholder="John Doe" />
+        <input aria-label="John Doe" type="text" id="contact-name" placeholder="John Doe" />
       </div>
       <div class="form-group">
         <label>Email</label>
-        <input type="email" id="contact-email" placeholder="you@example.com" />
+        <input aria-label="you@example.com" type="email" id="contact-email" placeholder="you@example.com" />
       </div>
       <div class="form-group">
         <label>Subject</label>
-        <input type="text" id="contact-subject" placeholder="Question about an order" />
+        <input aria-label="Question about an order" type="text" id="contact-subject" placeholder="Question about an order" />
       </div>
       <div class="form-group">
         <label>Message</label>
-        <textarea id="contact-message" placeholder="How can we help you?" rows="5" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
+        <textarea aria-label="How can we help you?" id="contact-message" placeholder="How can we help you?" rows="5" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
       </div>
       <button class="btn btn-primary" style="width:100%;padding:12px;font-size:15px" onclick="sendContact()">Send Message</button>
     </div>
@@ -1985,7 +1986,7 @@
         <h2 style="font-family:var(--font-display);font-size:22px;font-weight:700;text-align:center;margin-bottom:24px">Admin Panel</h2>
         <div class="form-group">
           <label>Admin Password</label>
-          <input type="password" id="admin-pass-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')adminLogin()" />
+          <input aria-label="Enter admin password" type="password" id="admin-pass-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')adminLogin()" />
         </div>
         <button class="btn btn-primary" style="width:100%;padding:12px" onclick="adminLogin()">Login</button>
       </div>
@@ -2032,7 +2033,7 @@
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-            <select id="order-status-filter" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
+            <select id="order-status-filter" aria-label="Filter orders by status" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
               <option value="all">All Orders</option>
               <option value="pending">Pending</option>
               <option value="paid">Paid</option>
@@ -2042,17 +2043,17 @@
               <option value="cancelled">Cancelled</option>
               <option value="refunded">Refunded</option>
             </select>
-            <select id="order-sort" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
+            <select id="order-sort" aria-label="Sort orders" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
             </select>
-            <select id="order-perpage" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
+            <select id="order-perpage" aria-label="Orders per page" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
               <option value="10">10 / page</option>
               <option value="20">20 / page</option>
               <option value="50">50 / page</option>
               <option value="100">100 / page</option>
             </select>
-            <input type="text" id="order-search" oninput="onOrderControlChange()" placeholder="Search by ID or email..." style="flex:1;min-width:160px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px" />
+            <input aria-label="Search by ID or email..." type="text" id="order-search" oninput="onOrderControlChange()" placeholder="Search by ID or email..." style="flex:1;min-width:160px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px" />
           </div>
           <div class="admin-table">
             <div class="admin-table-head" style="grid-template-columns:90px 1fr 120px 100px 65px 105px 36px">
@@ -2151,13 +2152,13 @@
 
             <div class="form-group">
               <label>Target Keywords</label>
-              <input type="text" id="blog-keywords" placeholder="e.g. buy aged reddit accounts, reddit marketing" />
+              <input aria-label="e.g. buy aged reddit accounts, reddit marketing" type="text" id="blog-keywords" placeholder="e.g. buy aged reddit accounts, reddit marketing" />
               <p style="font-size:11px;color:var(--muted);margin-top:4px">Comma-separated. The main topic of your post.</p>
             </div>
 
             <div class="form-group">
               <label>Category</label>
-              <input type="text" id="blog-category" placeholder="e.g. Guides, Marketing, News" list="blog-cat-list" />
+              <input aria-label="e.g. Guides, Marketing, News" type="text" id="blog-category" placeholder="e.g. Guides, Marketing, News" list="blog-cat-list" />
               <datalist id="blog-cat-list"></datalist>
             </div>
 
@@ -2193,7 +2194,7 @@
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:8px;padding-bottom:16px;border-bottom:1px solid var(--border)">Categories</h2>
             <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Create categories to organize your blog. These appear in the generator dropdown and as filters on your blog page.</p>
             <div style="display:flex;gap:8px;margin-bottom:16px">
-              <input type="text" id="new-category-input" placeholder="e.g. Guides" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px" onkeydown="if(event.key==='Enter')addBlogCategory()" />
+              <input aria-label="e.g. Guides" type="text" id="new-category-input" placeholder="e.g. Guides" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px" onkeydown="if(event.key==='Enter')addBlogCategory()" />
               <button class="btn btn-primary" onclick="addBlogCategory()" style="white-space:nowrap">Add</button>
             </div>
             <div id="blog-categories-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
@@ -2208,7 +2209,7 @@
 
         <div id="admin-users-tab" style="display:none">
           <div class="admin-title">Users</div>
-          <input type="text" id="user-search" oninput="renderAdminUsers()" placeholder="Search by email or name..." style="width:100%;max-width:360px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;margin-bottom:16px" />
+          <input aria-label="Search by email or name..." type="text" id="user-search" oninput="renderAdminUsers()" placeholder="Search by email or name..." style="width:100%;max-width:360px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;margin-bottom:16px" />
           <div class="admin-table">
             <div class="admin-table-head" style="grid-template-columns:1fr 110px 70px 90px 70px">
               <span>Email</span><span>Registered</span><span>Orders</span><span>Spent</span><span></span>
@@ -2225,24 +2226,24 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="form-group">
                 <label>First Name</label>
-                <input type="text" id="aprof-name" placeholder="John" />
+                <input aria-label="John" type="text" id="aprof-name" placeholder="John" />
               </div>
               <div class="form-group">
                 <label>Last Name</label>
-                <input type="text" id="aprof-lastname" placeholder="Doe" />
+                <input aria-label="Doe" type="text" id="aprof-lastname" placeholder="Doe" />
               </div>
             </div>
             <div class="form-group">
               <label>Email</label>
-              <input type="email" id="aprof-email" placeholder="admin@example.com" />
+              <input aria-label="admin@example.com" type="email" id="aprof-email" placeholder="admin@example.com" />
             </div>
             <div class="form-group">
               <label>Phone Number</label>
-              <input type="text" id="aprof-phone" placeholder="+994 XX XXX XX XX" />
+              <input aria-label="+994 XX XXX XX XX" type="text" id="aprof-phone" placeholder="+994 XX XXX XX XX" />
             </div>
             <div class="form-group">
               <label>Address</label>
-              <textarea id="aprof-address" rows="3" placeholder="Street, City, Country" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
+              <textarea aria-label="Street, City, Country" id="aprof-address" rows="3" placeholder="Street, City, Country" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
             </div>
             <button class="btn btn-primary" onclick="saveAdminProfile()">Save Profile</button>
           </div>
@@ -2255,7 +2256,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="form-group">
                 <label>First Name</label>
-                <input type="text" id="admin-prof-name" placeholder="Admin" />
+                <input aria-label="Admin" type="text" id="admin-prof-name" placeholder="Admin" />
               </div>
               <div class="form-group">
                 <label>Last Name</label>
@@ -2264,15 +2265,15 @@
             </div>
             <div class="form-group">
               <label>Email</label>
-              <input type="email" id="admin-prof-email" placeholder="admin@digitalitems.store" />
+              <input aria-label="admin@digitalitems.store" type="email" id="admin-prof-email" placeholder="admin@digitalitems.store" />
             </div>
             <div class="form-group">
               <label>Phone Number</label>
-              <input type="text" id="admin-prof-phone" placeholder="+994 XX XXX XX XX" />
+              <input aria-label="+994 XX XXX XX XX" type="text" id="admin-prof-phone" placeholder="+994 XX XXX XX XX" />
             </div>
             <div class="form-group">
               <label>Address</label>
-              <textarea id="admin-prof-address" rows="3" placeholder="Street, City, Country" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
+              <textarea aria-label="Street, City, Country" id="admin-prof-address" rows="3" placeholder="Street, City, Country" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:var(--font-body);outline:none;resize:vertical"></textarea>
             </div>
             <button class="btn btn-primary" onclick="saveAdminProfile()">Save Profile</button>
           </div>
@@ -2282,46 +2283,46 @@
 
             <div class="form-group">
               <label>Google Analytics 4 (Measurement ID)</label>
-              <input type="text" id="track-ga4" placeholder="G-XXXXXXXXXX" />
+              <input aria-label="G-XXXXXXXXXX" type="text" id="track-ga4" placeholder="G-XXXXXXXXXX" />
               <p style="font-size:11px;color:var(--muted);margin-top:4px">Just the ID. Full gtag.js loads automatically.</p>
             </div>
 
             <div class="form-group">
               <label>Google Ads (Conversion ID)</label>
-              <input type="text" id="track-gads" placeholder="AW-XXXXXXXXX" />
+              <input aria-label="AW-XXXXXXXXX" type="text" id="track-gads" placeholder="AW-XXXXXXXXX" />
               <p style="font-size:11px;color:var(--muted);margin-top:4px">For conversion tracking on purchases.</p>
             </div>
 
             <div class="form-group">
               <label>Google Ads Conversion Label (optional)</label>
-              <input type="text" id="track-gadslabel" placeholder="AbCdEfGhIjK-l2mNoPq" />
+              <input aria-label="AbCdEfGhIjK-l2mNoPq" type="text" id="track-gadslabel" placeholder="AbCdEfGhIjK-l2mNoPq" />
               <p style="font-size:11px;color:var(--muted);margin-top:4px">From your purchase conversion action in Google Ads. Without it, basic Ads tracking still works.</p>
             </div>
 
             <div class="form-group">
               <label>Google Tag Manager (Container ID)</label>
-              <input type="text" id="track-gtm" placeholder="GTM-XXXXXXX" />
+              <input aria-label="GTM-XXXXXXX" type="text" id="track-gtm" placeholder="GTM-XXXXXXX" />
               <p style="font-size:11px;color:var(--muted);margin-top:4px">If you use GTM, you can manage everything from there instead.</p>
             </div>
 
             <div class="form-group">
               <label>Yandex Metrica (Counter ID)</label>
-              <input type="text" id="track-yandex" placeholder="12345678" />
+              <input aria-label="12345678" type="text" id="track-yandex" placeholder="12345678" />
             </div>
 
             <div class="form-group">
               <label>Meta Pixel (Facebook Pixel ID)</label>
-              <input type="text" id="track-metapixel" placeholder="1234567890123456" />
+              <input aria-label="1234567890123456" type="text" id="track-metapixel" placeholder="1234567890123456" />
             </div>
 
             <div class="form-group">
               <label>TikTok Pixel ID</label>
-              <input type="text" id="track-tiktok" placeholder="CXXXXXXXXXXXXXXXXX" />
+              <input aria-label="CXXXXXXXXXXXXXXXXX" type="text" id="track-tiktok" placeholder="CXXXXXXXXXXXXXXXXX" />
             </div>
 
             <div class="form-group">
               <label>Custom &lt;head&gt; code (advanced)</label>
-              <textarea id="track-customhead" rows="3" placeholder="Any other verification meta tags or scripts..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:monospace;outline:none;resize:vertical"></textarea>
+              <textarea aria-label="Any other verification meta tags or scripts..." id="track-customhead" rows="3" placeholder="Any other verification meta tags or scripts..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:monospace;outline:none;resize:vertical"></textarea>
             </div>
 
             <button class="btn btn-primary" onclick="saveTracking()">Save Tracking Codes</button>
@@ -2345,11 +2346,11 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="form-group">
                 <label>Minimum Order (USD)</label>
-                <input type="number" id="settings-min" placeholder="0" step="0.01" min="0" />
+                <input aria-label="0" type="number" id="settings-min" placeholder="0" step="0.01" min="0" />
               </div>
               <div class="form-group">
                 <label>Maximum Order (USD)</label>
-                <input type="number" id="settings-max" placeholder="0 = no limit" step="0.01" min="0" />
+                <input aria-label="0 = no limit" type="number" id="settings-max" placeholder="0 = no limit" step="0.01" min="0" />
               </div>
             </div>
             <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Customers won't be able to pay if their cart total is below the minimum or above the maximum. Set to 0 for no limit.</p>
@@ -2359,7 +2360,7 @@
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">Payment Gateway</h2>
             <div class="form-group">
               <label>Worker URL (Cloudflare)</label>
-              <input type="text" id="settings-worker" placeholder="https://your-worker.workers.dev" />
+              <input aria-label="https://your-worker.workers.dev" type="text" id="settings-worker" placeholder="https://your-worker.workers.dev" />
             </div>
             <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
             <p style="font-size:12px;color:var(--muted);margin-top:12px">Stripe keys and admin password are managed securely in Cloudflare environment variables, not here.</p>
@@ -2398,11 +2399,11 @@
     <h2 id="modal-title">Add Product</h2>
     <div class="form-group">
       <label>Product Name (title)</label>
-      <input type="text" id="prod-name" placeholder="Twitter accounts 2010 aged" />
+      <input aria-label="Twitter accounts 2010 aged" type="text" id="prod-name" placeholder="Twitter accounts 2010 aged" />
     </div>
     <div class="form-group">
       <label>Category</label>
-      <select id="prod-cat" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none">
+      <select id="prod-cat" aria-label="Product category" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none">
         <option value="twitter">Twitter Accounts</option>
         <option value="reddit">Reddit Accounts</option>
         <option value="marketing">Reddit Marketing</option>
@@ -2410,19 +2411,19 @@
     </div>
     <div class="form-group">
       <label>Price (USD)</label>
-      <input type="number" id="prod-price" placeholder="10.00" step="0.01" />
+      <input aria-label="10.00" type="number" id="prod-price" placeholder="10.00" step="0.01" />
     </div>
     <div class="form-group">
       <label>Stock</label>
       <div style="display:flex;gap:8px;align-items:center">
         <button type="button" id="stock-btn-always" onclick="setStockMode('always')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--accent1);background:var(--accent1);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Always in stock</button>
         <button type="button" id="stock-btn-set" onclick="setStockMode('set')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">Set stock</button>
-        <input type="number" id="prod-stock" placeholder="Qty" min="0" step="1" style="width:90px;display:none" />
+        <input aria-label="Qty" type="number" id="prod-stock" placeholder="Qty" min="0" step="1" style="width:90px;display:none" />
       </div>
     </div>
     <div class="form-group">
       <label>Short Spec (shown on listing, use · to separate)</label>
-      <input type="text" id="prod-desc" placeholder="Karma: 100+ · Created: 2020" />
+      <input aria-label="Karma: 100+ · Created: 2020" type="text" id="prod-desc" placeholder="Karma: 100+ · Created: 2020" />
     </div>
     <div class="form-group">
       <label>Full Description (shown on product page, HTML allowed)</label>
@@ -2431,7 +2432,7 @@
     <div class="form-group">
       <label>Product Image</label>
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="text" id="prod-image" placeholder="Image URL or upload below" style="flex:1" />
+        <input aria-label="Image URL or upload below" type="text" id="prod-image" placeholder="Image URL or upload below" style="flex:1" />
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
         <input type="file" id="prod-image-file" accept="image/*" style="font-size:13px;color:var(--muted)" />
@@ -2448,18 +2449,18 @@
       <label>Page URL (slug)</label>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="color:var(--muted);font-size:13px">/products/</span>
-        <input type="text" id="prod-slug" placeholder="twitter-accounts-2010" style="flex:1" />
+        <input aria-label="twitter-accounts-2010" type="text" id="prod-slug" placeholder="twitter-accounts-2010" style="flex:1" />
       </div>
     </div>
     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
       <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">SEO Settings</div>
       <div class="form-group">
         <label>Meta Title</label>
-        <input type="text" id="prod-metatitle" placeholder="Buy Twitter Accounts 2010 – DigitalItems.Store" />
+        <input aria-label="Buy Twitter Accounts 2010 – DigitalItems.Store" type="text" id="prod-metatitle" placeholder="Buy Twitter Accounts 2010 – DigitalItems.Store" />
       </div>
       <div class="form-group">
         <label>Meta Description</label>
-        <input type="text" id="prod-metadesc" placeholder="Buy aged 2010 Twitter account..." />
+        <input aria-label="Buy aged 2010 Twitter account..." type="text" id="prod-metadesc" placeholder="Buy aged 2010 Twitter account..." />
       </div>
     </div>
     <div style="display:flex;gap:12px;margin-top:8px">
@@ -2475,11 +2476,11 @@
     <h2 id="page-modal-title">Edit Page</h2>
     <div class="form-group">
       <label>Page Title (H1)</label>
-      <input type="text" id="page-title" placeholder="About Us" />
+      <input aria-label="About Us" type="text" id="page-title" placeholder="About Us" />
     </div>
     <div class="form-group">
       <label>URL Slug</label>
-      <input type="text" id="page-slug" placeholder="about" />
+      <input aria-label="about" type="text" id="page-slug" placeholder="about" />
     </div>
     <div class="form-group">
       <label>Content (HTML allowed)</label>
@@ -2489,11 +2490,11 @@
       <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">SEO</div>
       <div class="form-group">
         <label>Meta Title</label>
-        <input type="text" id="page-metatitle" placeholder="About Us – DigitalItems.Store" />
+        <input aria-label="About Us – DigitalItems.Store" type="text" id="page-metatitle" placeholder="About Us – DigitalItems.Store" />
       </div>
       <div class="form-group">
         <label>Meta Description</label>
-        <input type="text" id="page-metadesc" placeholder="Learn about DigitalItems LTD..." />
+        <input aria-label="Learn about DigitalItems LTD..." type="text" id="page-metadesc" placeholder="Learn about DigitalItems LTD..." />
       </div>
     </div>
     <div style="display:flex;gap:12px;margin-top:8px">
@@ -3478,15 +3479,15 @@ function restoreCheckoutPage() {
         <h2>Contact Information</h2>
         <div class="form-group">
           <label>Full Name</label>
-          <input type="text" id="co-name" placeholder="John Doe" />
+          <input aria-label="John Doe" type="text" id="co-name" placeholder="John Doe" />
         </div>
         <div class="form-group">
           <label>Email Address</label>
-          <input type="email" id="co-email" placeholder="john@example.com" />
+          <input aria-label="john@example.com" type="email" id="co-email" placeholder="john@example.com" />
         </div>
         <div class="form-group">
           <label>Telegram (optional)</label>
-          <input type="text" id="co-tg" placeholder="@username" />
+          <input aria-label="@username" type="text" id="co-tg" placeholder="@username" />
         </div>
       </div>
     </div>
@@ -4032,7 +4033,7 @@ async function renderAdminOrders(ordersData) {
       <span style="font-size:12px;color:var(--muted)">${(o.items||[]).map(i=>i.name+(i.qty>1?' ×'+i.qty:'')).join(', ')}</span>
       <span style="font-size:11px;color:var(--muted)">${formatOrderDate(o.date)}</span>
       <span style="color:var(--accent1);font-weight:600;font-size:13px">$${o.total.toFixed(2)}</span>
-      <select onchange="adminUpdateOrderStatus('${o.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 6px;color:var(--text);font-size:11px;cursor:pointer">
+      <select aria-label="Change order status" onchange="adminUpdateOrderStatus('${o.id}',this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 6px;color:var(--text);font-size:11px;cursor:pointer">
         <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
         <option value="paid" ${o.status==='paid'?'selected':''}>Paid</option>
         <option value="partial" ${o.status==='partial'?'selected':''}>Partial</option>
@@ -4563,7 +4564,7 @@ async function loadAdminBlogs() {
           <div style="font-weight:600;font-size:14px">${b.title}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px">👁 ${b.views||0} views · ${new Date(b.date).toLocaleDateString()} · /blog/${b.slug}</div>
         </div>
-        <select onchange="changeBlogCategory('${b.slug}', this.value)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;max-width:120px">${catOptions}</select>
+        <select aria-label="Change blog category" onchange="changeBlogCategory('${b.slug}', this.value)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;max-width:120px">${catOptions}</select>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button onclick="window.open('/blog/${b.slug}','_blank')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px">View</button>
           <button onclick="deleteBlog('${b.slug}')" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px">Del</button>
@@ -4694,9 +4695,9 @@ function openUserDetail(email) {
       <div style="margin-bottom:20px">
         <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border)">Edit Profile</h3>
         <div style="display:flex;flex-direction:column;gap:10px">
-          <input type="text" id="ud-name" value="${(user.name||'').replace(/"/g,'&quot;')}" placeholder="Full name" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
-          <input type="text" id="ud-phone" value="${(user.phone||'').replace(/"/g,'&quot;')}" placeholder="Phone" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
-          <input type="text" id="ud-telegram" value="${(user.telegram||'').replace(/"/g,'&quot;')}" placeholder="Telegram" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
+          <input aria-label="Full name" type="text" id="ud-name" value="${(user.name||'').replace(/"/g,'&quot;')}" placeholder="Full name" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
+          <input aria-label="Phone" type="text" id="ud-phone" value="${(user.phone||'').replace(/"/g,'&quot;')}" placeholder="Phone" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
+          <input aria-label="Telegram" type="text" id="ud-telegram" value="${(user.telegram||'').replace(/"/g,'&quot;')}" placeholder="Telegram" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
           <button onclick="saveUserProfile('${(user.email||'').replace(/'/g,'')}')" class="btn btn-primary" style="align-self:flex-start">Save Profile</button>
           <div id="ud-save-status" style="font-size:12px;color:var(--muted)"></div>
         </div>
