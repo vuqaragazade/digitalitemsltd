@@ -1026,6 +1026,8 @@
     .status-failed { background: #dc262620; color: #f87171; border: 1px solid #dc262640; }
     .status-partial { background: #ea580c20; color: #fb923c; border: 1px solid #ea580c40; }
     .status-delivered { background: #2563eb20; color: #60a5fa; border: 1px solid #2563eb40; }
+    .status-cancelled { background: #57534e20; color: #a8a29e; border: 1px solid #57534e40; }
+    .status-refunded { background: #9333ea20; color: #c084fc; border: 1px solid #9333ea40; }
 
     /* ── ADMIN PANEL ── */
     .admin-layout {
@@ -2017,6 +2019,8 @@
               <option value="partial">Partial</option>
               <option value="failed">Failed</option>
               <option value="delivered">Delivered</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="refunded">Refunded</option>
             </select>
             <select id="order-sort" onchange="onOrderControlChange()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;cursor:pointer">
               <option value="newest">Newest first</option>
@@ -3940,6 +3944,8 @@ async function renderAdminOrders(ordersData) {
         <option value="partial" ${o.status==='partial'?'selected':''}>Partial</option>
         <option value="failed" ${o.status==='failed'?'selected':''}>Failed</option>
         <option value="delivered" ${o.status==='delivered'?'selected':''}>Delivered</option>
+        <option value="cancelled" ${o.status==='cancelled'?'selected':''}>Cancelled</option>
+        <option value="refunded" ${o.status==='refunded'?'selected':''}>Refunded</option>
       </select>
       <button onclick="adminDeleteOrder('${o.id}')" title="Delete" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:5px 7px;border-radius:6px;cursor:pointer;font-size:13px">🗑</button>
     </div>
