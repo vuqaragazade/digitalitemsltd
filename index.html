@@ -2164,6 +2164,12 @@
               <datalist id="blog-cat-list"></datalist>
             </div>
 
+            <div class="form-group">
+              <label>Extra Instructions (optional)</label>
+              <textarea id="blog-instructions" rows="3" aria-label="Extra instructions for the AI" placeholder="e.g. Write in a formal tone. Focus on beginners. Mention our Twitter accounts. Include a step-by-step section." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:vertical"></textarea>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Tell the AI how to write it — tone, angle, audience, what to emphasize, structure. Keywords still apply.</p>
+            </div>
+
             <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text);cursor:pointer">
               <input type="checkbox" id="blog-with-image" checked style="width:auto;cursor:pointer" />
               Generate AI header image (DALL-E)
@@ -4379,6 +4385,7 @@ function setMeta(name, content) {
 async function generateBlog() {
   const keywords = document.getElementById('blog-keywords').value.trim();
   const category = document.getElementById('blog-category').value.trim();
+  const instructions = document.getElementById('blog-instructions').value.trim();
   const withImage = document.getElementById('blog-with-image').checked;
   const btn = document.getElementById('blog-gen-btn');
   const status = document.getElementById('blog-gen-status');
@@ -4402,7 +4409,7 @@ async function generateBlog() {
     const res = await fetch(WORKER_URL + '/generate-blog', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
-      body: JSON.stringify({ keywords, category, siteLinks, withImage })
+      body: JSON.stringify({ keywords, category, instructions, siteLinks, withImage })
     });
     const data = await res.json();
     if (data.error) { status.textContent = 'Error: ' + data.error; btn.disabled = false; return; }
