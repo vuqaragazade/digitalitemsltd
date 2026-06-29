@@ -4364,12 +4364,14 @@ async function generateBlog() {
 
   // Build internal links list from existing site pages/products for backlinks
   const siteLinks = [];
+  const BASE = 'https://digitalitems.store';
   (allProducts || []).forEach(p => {
-    if (p.slug) siteLinks.push({ title: p.name, url: '/products/' + p.slug });
+    const slug = p.slug || slugify(p.name);
+    if (slug) siteLinks.push({ title: p.name, url: BASE + '/products/' + slug });
   });
-  siteLinks.push({ title: 'Twitter Accounts', url: '/twitter-accounts' });
-  siteLinks.push({ title: 'Reddit Accounts', url: '/reddit-accounts' });
-  siteLinks.push({ title: 'Reddit Marketing', url: '/reddit-marketing' });
+  siteLinks.push({ title: 'Buy Aged Twitter Accounts', url: BASE + '/twitter-accounts' });
+  siteLinks.push({ title: 'Buy Reddit Accounts with Karma', url: BASE + '/reddit-accounts' });
+  siteLinks.push({ title: 'Reddit Marketing Services', url: BASE + '/reddit-marketing' });
 
   try {
     const res = await fetch(WORKER_URL + '/generate-blog', {
@@ -4381,7 +4383,11 @@ async function generateBlog() {
     if (data.error) { status.textContent = 'Error: ' + data.error; btn.disabled = false; return; }
     generatedBlog = data.blog;
     fillBlogPreview(data.blog);
-    status.innerHTML = '<span style="color:#4ade80">✓ Draft ready — review and publish below.</span>';
+    if (data.blog.imageError) {
+      status.innerHTML = '<span style="color:#fbbf24">✓ Text ready, but image failed: ' + data.blog.imageError + '</span>';
+    } else {
+      status.innerHTML = '<span style="color:#4ade80">✓ Draft ready — review and publish below.</span>';
+    }
   } catch(e) {
     status.textContent = 'Generation failed: ' + e.message;
   }
