@@ -1515,6 +1515,7 @@
       <a onclick="navigate('twitter')" id="nav-twitter">Twitter</a>
       <a onclick="navigate('reddit')" id="nav-reddit">Reddit</a>
       <a onclick="navigate('marketing')" id="nav-marketing">Marketing</a>
+      <a onclick="navigate('blog')" id="nav-blog">Blog</a>
       <a onclick="navigate('about')" id="nav-about">About</a>
     </nav>
     <div class="header-right">
@@ -1957,6 +1958,24 @@
   </div>
 </div>
 
+<!-- ═══════════════ BLOG LIST PAGE ═══════════════ -->
+<div class="page" id="page-blog">
+  <div class="static-page" style="max-width:1000px">
+    <h1>Blog</h1>
+    <div class="updated">Guides, tips, and news</div>
+    <div id="blog-category-filter" style="display:flex;gap:8px;flex-wrap:wrap;margin:20px 0"></div>
+    <div id="blog-list-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-top:20px"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ BLOG POST PAGE ═══════════════ -->
+<div class="page" id="page-blogpost">
+  <div class="static-page" style="max-width:720px">
+    <a onclick="navigate('blog')" style="color:var(--accent1);cursor:pointer;font-size:13px">‹ Back to Blog</a>
+    <div id="blogpost-content" style="margin-top:16px"></div>
+  </div>
+</div>
+
 <!-- ═══════════════ ADMIN PAGE ═══════════════ -->
 <div class="page" id="page-admin">
   <!-- Admin Login -->
@@ -1982,6 +2001,7 @@
         <div class="admin-nav-item" onclick="adminTab('analytics',event)">📊 Analytics</div>
         <div class="admin-nav-item" onclick="adminTab('products',event)">🛍 Products</div>
         <div class="admin-nav-item" onclick="adminTab('pages',event)">📄 Pages</div>
+        <div class="admin-nav-item" onclick="adminTab('blog',event)">✍️ Blog</div>
         <div class="admin-nav-item" onclick="adminTab('users',event)">👥 Users</div>
         <div class="admin-nav-item" onclick="adminTab('profile',event)">👤 Profile</div>
         <div class="admin-nav-item" onclick="adminTab('settings',event)">⚙️ Settings</div>
@@ -2122,6 +2142,59 @@
         </div>
 
         <!-- Users Tab -->
+        <div id="admin-blog-tab" style="display:none">
+          <div class="admin-title">Blog</div>
+
+          <div class="checkout-box" style="max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:8px;padding-bottom:16px;border-bottom:1px solid var(--border)">✨ Generate AI Blog Post</h2>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Enter your target keywords. AI writes a full SEO-optimized post — title, content, meta tags, internal backlinks, hashtags, and an image.</p>
+
+            <div class="form-group">
+              <label>Target Keywords</label>
+              <input type="text" id="blog-keywords" placeholder="e.g. buy aged reddit accounts, reddit marketing" />
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Comma-separated. The main topic of your post.</p>
+            </div>
+
+            <div class="form-group">
+              <label>Category</label>
+              <input type="text" id="blog-category" placeholder="e.g. Guides, Marketing, News" list="blog-cat-list" />
+              <datalist id="blog-cat-list"></datalist>
+            </div>
+
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:13px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="blog-with-image" checked style="width:auto;cursor:pointer" />
+              Generate AI header image (DALL-E)
+            </label>
+
+            <button class="btn btn-primary" onclick="generateBlog()" id="blog-gen-btn">Generate Blog Post</button>
+            <div id="blog-gen-status" style="margin-top:14px;font-size:13px;color:var(--muted)"></div>
+          </div>
+
+          <!-- Preview / Edit area (hidden until generated) -->
+          <div id="blog-preview" class="checkout-box" style="display:none;max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">Preview & Edit</h2>
+            <div id="blog-preview-image" style="margin-bottom:16px"></div>
+            <div class="form-group"><label>Title</label><input type="text" id="blog-edit-title" /></div>
+            <div class="form-group"><label>Slug (URL)</label><input type="text" id="blog-edit-slug" /></div>
+            <div class="form-group"><label>Meta Title</label><input type="text" id="blog-edit-metatitle" /></div>
+            <div class="form-group"><label>Meta Description</label><textarea id="blog-edit-metadesc" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:vertical"></textarea></div>
+            <div class="form-group"><label>Excerpt</label><textarea id="blog-edit-excerpt" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:vertical"></textarea></div>
+            <div class="form-group"><label>Content (HTML)</label><textarea id="blog-edit-content" rows="14" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical"></textarea></div>
+            <div class="form-group"><label>Hashtags (comma-separated)</label><input type="text" id="blog-edit-hashtags" /></div>
+            <div style="display:flex;gap:10px;margin-top:8px">
+              <button class="btn btn-primary" onclick="publishBlog()">Publish</button>
+              <button class="btn btn-ghost" onclick="document.getElementById('blog-preview').style.display='none'">Discard</button>
+            </div>
+            <div id="blog-publish-status" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
+          </div>
+
+          <!-- Published posts -->
+          <div class="checkout-box" style="max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">Published Posts</h2>
+            <div id="admin-blog-list"></div>
+          </div>
+        </div>
+
         <div id="admin-users-tab" style="display:none">
           <div class="admin-title">Users</div>
           <input type="text" id="user-search" oninput="renderAdminUsers()" placeholder="Search by email or name..." style="width:100%;max-width:360px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;margin-bottom:16px" />
@@ -2638,6 +2711,7 @@ const PAGE_ROUTES = {
   refund: '/refund-policy',
   privacy: '/privacy-policy',
   contact: '/contact',
+  blog: '/blog',
   product: '/product',
   admin: '/admin'
 };
@@ -2701,6 +2775,7 @@ function navigate(page, skipPush) {
   if (page === 'reddit') renderProducts('reddit', 'reddit-list');
   if (page === 'marketing') renderProducts('marketing', 'marketing-list');
   if (page === 'checkout') renderCheckout();
+  if (page === 'blog') renderBlogList();
   if (page === 'contact') { }
   if (page === 'admin') {
     if (adminLoggedIn) {
@@ -2729,6 +2804,11 @@ function pageFromPath(path) {
   if (path.startsWith('/product/')) {
     return { page: 'product', productId: path.replace('/product/', '') };
   }
+  // Blog post URLs: /blog/slug
+  if (path.startsWith('/blog/')) {
+    const slug = path.replace('/blog/', '');
+    return { page: 'blogpost', slug };
+  }
   for (const [page, route] of Object.entries(PAGE_ROUTES)) {
     if (route === path) return page;
   }
@@ -2745,6 +2825,8 @@ window.addEventListener('popstate', (e) => {
   if (typeof result === 'object' && result.page === 'product') {
     if (result.productId) openProduct(result.productId, true);
     else navigate('home', true);
+  } else if (typeof result === 'object' && result.page === 'blogpost') {
+    openBlogPost(result.slug, true);
   } else if (typeof result === 'object' && result.page === 'custom') {
     navigate('home', true);
   } else {
@@ -3857,7 +3939,7 @@ function adminLogout() {
 }
 
 function adminTab(tab, evt) {
-  ['orders','analytics','products','pages','users','profile','settings'].forEach(t => {
+  ['orders','analytics','products','pages','blog','users','profile','settings'].forEach(t => {
     const el = document.getElementById('admin-'+t+'-tab');
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
@@ -3868,6 +3950,7 @@ function adminTab(tab, evt) {
   if (tab === 'analytics') renderAnalytics();
   if (tab === 'products') { if (!adminOrders || adminOrders.length === 0) { renderAdminOrders(null).then(()=>renderAdminProducts()); } else { renderAdminProducts(); } }
   if (tab === 'pages') renderAdminPages();
+  if (tab === 'blog') loadAdminBlogs();
   if (tab === 'users') renderAdminUsers();
   if (tab === 'profile') loadAdminProfile();
   if (tab === 'settings') { loadPaymentLimits(); loadTrackingSettings(); }
@@ -4178,6 +4261,227 @@ function renderAdminProducts() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ════════════════════════════════════════
+// BLOG (AI-generated)
+// ════════════════════════════════════════
+let generatedBlog = null;
+let blogListCache = [];
+let blogActiveCategory = 'all';
+
+async function renderBlogList() {
+  const grid = document.getElementById('blog-list-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="color:var(--muted)">Loading...</div>';
+  try {
+    const res = await fetch(WORKER_URL + '/blogs');
+    const data = await res.json();
+    blogListCache = data.blogs || [];
+  } catch(e) { blogListCache = []; }
+
+  // Category filter buttons
+  const cats = ['all', ...new Set(blogListCache.map(b => b.category).filter(Boolean))];
+  const filterEl = document.getElementById('blog-category-filter');
+  if (filterEl) {
+    filterEl.innerHTML = cats.map(c => `
+      <button onclick="filterBlogCategory('${c}')" style="padding:7px 14px;border-radius:8px;border:1px solid ${blogActiveCategory===c?'var(--accent1)':'var(--border)'};background:${blogActiveCategory===c?'var(--accent1)':'var(--bg3)'};color:${blogActiveCategory===c?'#fff':'var(--text)'};font-size:13px;cursor:pointer;text-transform:capitalize">${c}</button>
+    `).join('');
+  }
+
+  const filtered = blogActiveCategory === 'all' ? blogListCache : blogListCache.filter(b => b.category === blogActiveCategory);
+  if (!filtered.length) {
+    grid.innerHTML = '<div style="color:var(--muted)">No posts yet.</div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(b => {
+    const img = b.image ? (b.image.startsWith('http') ? b.image : WORKER_URL + b.image) : '';
+    return `
+    <div onclick="openBlogPost('${b.slug}')" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .2s" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
+      ${img ? `<img src="${img}" style="width:100%;height:160px;object-fit:cover" alt="${b.title}" />` : '<div style="height:160px;background:var(--bg3)"></div>'}
+      <div style="padding:16px">
+        ${b.category ? `<span style="font-size:11px;color:var(--accent1);text-transform:uppercase;letter-spacing:0.5px">${b.category}</span>` : ''}
+        <h3 style="font-size:16px;font-weight:600;margin:6px 0 8px;line-height:1.3">${b.title}</h3>
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;margin:0">${b.excerpt||''}</p>
+        <div style="font-size:11px;color:var(--muted);margin-top:12px">${new Date(b.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterBlogCategory(cat) {
+  blogActiveCategory = cat;
+  renderBlogList();
+}
+
+async function openBlogPost(slug, skipPush) {
+  navigate('blogpost', true);
+  if (!skipPush) history.pushState({page:'blogpost', slug}, '', '/blog/' + slug);
+  const el = document.getElementById('blogpost-content');
+  el.innerHTML = '<div style="color:var(--muted)">Loading...</div>';
+  try {
+    const res = await fetch(WORKER_URL + '/blog?slug=' + encodeURIComponent(slug));
+    const data = await res.json();
+    const b = data.blog;
+    if (!b) { el.innerHTML = '<h1>Post not found</h1>'; return; }
+    // SEO: update title + meta
+    document.title = b.metaTitle || b.title;
+    setMeta('description', b.metaDescription || b.excerpt || '');
+    const canon = document.querySelector('link[rel="canonical"]');
+    if (canon) canon.setAttribute('href', 'https://digitalitems.store/blog/' + b.slug);
+    const img = b.image ? (b.image.startsWith('http') ? b.image : WORKER_URL + b.image) : '';
+    const hashtags = (b.hashtags||[]).length ? `<div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">${b.hashtags.map(h=>`<span style="font-size:13px;color:var(--accent1)">${h}</span>`).join('')}</div>` : '';
+    el.innerHTML = `
+      ${b.category ? `<span style="font-size:12px;color:var(--accent1);text-transform:uppercase;letter-spacing:0.5px">${b.category}</span>` : ''}
+      <h1 style="margin:10px 0">${b.title}</h1>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${new Date(b.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
+      ${img ? `<img src="${img}" style="width:100%;border-radius:12px;margin-bottom:24px" alt="${b.title}" />` : ''}
+      <div class="blog-body" style="line-height:1.7;font-size:16px">${b.content||''}</div>
+      ${hashtags}
+    `;
+    window.scrollTo(0,0);
+  } catch(e) {
+    el.innerHTML = '<h1>Could not load post</h1>';
+  }
+}
+
+function setMeta(name, content) {
+  let m = document.querySelector(`meta[name="${name}"]`);
+  if (!m) { m = document.createElement('meta'); m.setAttribute('name', name); document.head.appendChild(m); }
+  m.setAttribute('content', content);
+}
+
+async function generateBlog() {
+  const keywords = document.getElementById('blog-keywords').value.trim();
+  const category = document.getElementById('blog-category').value.trim();
+  const withImage = document.getElementById('blog-with-image').checked;
+  const btn = document.getElementById('blog-gen-btn');
+  const status = document.getElementById('blog-gen-status');
+  if (!keywords) { showToast('Enter target keywords first'); return; }
+
+  btn.disabled = true;
+  status.innerHTML = '⏳ AI is writing your blog post... this can take 20-40 seconds.';
+
+  // Build internal links list from existing site pages/products for backlinks
+  const siteLinks = [];
+  (allProducts || []).forEach(p => {
+    if (p.slug) siteLinks.push({ title: p.name, url: '/products/' + p.slug });
+  });
+  siteLinks.push({ title: 'Twitter Accounts', url: '/twitter-accounts' });
+  siteLinks.push({ title: 'Reddit Accounts', url: '/reddit-accounts' });
+  siteLinks.push({ title: 'Reddit Marketing', url: '/reddit-marketing' });
+
+  try {
+    const res = await fetch(WORKER_URL + '/generate-blog', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ keywords, category, siteLinks, withImage })
+    });
+    const data = await res.json();
+    if (data.error) { status.textContent = 'Error: ' + data.error; btn.disabled = false; return; }
+    generatedBlog = data.blog;
+    fillBlogPreview(data.blog);
+    status.innerHTML = '<span style="color:#4ade80">✓ Draft ready — review and publish below.</span>';
+  } catch(e) {
+    status.textContent = 'Generation failed: ' + e.message;
+  }
+  btn.disabled = false;
+}
+
+function fillBlogPreview(blog) {
+  document.getElementById('blog-preview').style.display = 'block';
+  document.getElementById('blog-edit-title').value = blog.title || '';
+  document.getElementById('blog-edit-slug').value = blog.slug || '';
+  document.getElementById('blog-edit-metatitle').value = blog.metaTitle || '';
+  document.getElementById('blog-edit-metadesc').value = blog.metaDescription || '';
+  document.getElementById('blog-edit-excerpt').value = blog.excerpt || '';
+  document.getElementById('blog-edit-content').value = blog.content || '';
+  document.getElementById('blog-edit-hashtags').value = (blog.hashtags || []).join(', ');
+  const imgEl = document.getElementById('blog-preview-image');
+  if (blog.image) {
+    const src = blog.image.startsWith('http') ? blog.image : (WORKER_URL + blog.image);
+    imgEl.innerHTML = `<img src="${src}" style="width:100%;border-radius:10px" alt="${blog.title}" />`;
+  } else {
+    imgEl.innerHTML = '';
+  }
+  document.getElementById('blog-preview').scrollIntoView({behavior:'smooth'});
+}
+
+async function publishBlog() {
+  if (!generatedBlog) return;
+  const status = document.getElementById('blog-publish-status');
+  const blog = {
+    ...generatedBlog,
+    title: document.getElementById('blog-edit-title').value.trim(),
+    slug: document.getElementById('blog-edit-slug').value.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),
+    metaTitle: document.getElementById('blog-edit-metatitle').value.trim(),
+    metaDescription: document.getElementById('blog-edit-metadesc').value.trim(),
+    excerpt: document.getElementById('blog-edit-excerpt').value.trim(),
+    content: document.getElementById('blog-edit-content').value,
+    hashtags: document.getElementById('blog-edit-hashtags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    category: document.getElementById('blog-category').value.trim()
+  };
+  if (!blog.title || !blog.slug) { status.textContent = 'Title and slug are required'; return; }
+  status.textContent = 'Publishing...';
+  try {
+    const res = await fetch(WORKER_URL + '/blog', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ blog })
+    });
+    const data = await res.json();
+    if (data.error) { status.textContent = 'Error: ' + data.error; return; }
+    status.innerHTML = '<span style="color:#4ade80">✓ Published! View at /blog/' + blog.slug + '</span>';
+    document.getElementById('blog-preview').style.display = 'none';
+    generatedBlog = null;
+    document.getElementById('blog-keywords').value = '';
+    loadAdminBlogs();
+  } catch(e) {
+    status.textContent = 'Publish failed: ' + e.message;
+  }
+}
+
+async function loadAdminBlogs() {
+  const el = document.getElementById('admin-blog-list');
+  el.innerHTML = '<div style="color:var(--muted);font-size:13px">Loading...</div>';
+  try {
+    const res = await fetch(WORKER_URL + '/blogs');
+    const data = await res.json();
+    const blogs = data.blogs || [];
+    // Populate category datalist
+    const cats = [...new Set(blogs.map(b => b.category).filter(Boolean))];
+    const dl = document.getElementById('blog-cat-list');
+    if (dl) dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+    if (!blogs.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px">No posts yet. Generate your first one above.</div>';
+      return;
+    }
+    el.innerHTML = blogs.map(b => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px">${b.title}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${b.category||'Uncategorized'} · ${new Date(b.date).toLocaleDateString()} · /blog/${b.slug}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">
+          <button onclick="window.open('/blog/${b.slug}','_blank')" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px">View</button>
+          <button onclick="deleteBlog('${b.slug}')" style="background:#dc262620;border:1px solid #dc262640;color:#f87171;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px">Del</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px">Could not load posts</div>';
+  }
+}
+
+async function deleteBlog(slug) {
+  if (!confirm('Delete this blog post?')) return;
+  try {
+    await fetch(WORKER_URL + '/blog?slug=' + encodeURIComponent(slug), {
+      method: 'DELETE',
+      headers: {'X-Admin-Password': adminPassword}
+    });
+    loadAdminBlogs();
+  } catch(e) { showToast('Could not delete'); }
 }
 
 let allUsers = [];
@@ -5223,7 +5527,9 @@ handlePaymentRedirect();
     return;
   }
   const result = pageFromPath(path);
-  if (typeof result === 'object' && result.page === 'custom') {
+  if (typeof result === 'object' && result.page === 'blogpost') {
+    openBlogPost(result.slug, true);
+  } else if (typeof result === 'object' && result.page === 'custom') {
     navigate('home', true);
   } else {
     navigate(result, true);
