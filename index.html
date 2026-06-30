@@ -1681,6 +1681,7 @@
       <div class="checkout-box">
         <h2>Order Summary</h2>
         <div class="order-summary-items" id="order-summary"></div>
+        <div id="upsell-section"></div>
         <div style="padding:16px 0;border-top:1px solid var(--border)">
           <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Add a tip (optional)</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap" id="tip-buttons">
@@ -3287,6 +3288,23 @@ function saveCart() { localStorage.setItem('di_cart', JSON.stringify(cart)); }
 function cartTotal() { return cart.reduce((s, c) => s + c.price * c.qty, 0); }
 
 // ════════════════════════════════════════
+// BUNDLE DISCOUNT (buy 2+ products, save 10%)
+// ════════════════════════════════════════
+const BUNDLE_DISCOUNT_PCT = 10;       // percent off
+const BUNDLE_MIN_ITEMS = 2;           // distinct products required
+
+function distinctProductCount() {
+  return cart.filter(c => c.id !== 'tip').length;
+}
+
+function bundleDiscountAmount() {
+  if (distinctProductCount() >= BUNDLE_MIN_ITEMS) {
+    return cartTotal() * (BUNDLE_DISCOUNT_PCT / 100);
+  }
+  return 0;
+}
+
+// ════════════════════════════════════════
 // TIP
 // ════════════════════════════════════════
 let currentTip = 0;
@@ -3322,12 +3340,16 @@ function setCustomTip(val) {
 }
 
 function orderTotalWithTip() {
-  return cartTotal() + currentTip;
+  return cartTotal() - bundleDiscountAmount() + currentTip;
 }
 
-// Build order items array including tip as a line item (if any)
+// Build order items array including discount and tip as line items
 function buildOrderItems() {
   const items = cart.map(c => ({name: c.name, qty: c.qty, price: c.price}));
+  const discount = bundleDiscountAmount();
+  if (discount > 0) {
+    items.push({ name: `Bundle Discount (${BUNDLE_DISCOUNT_PCT}% off)`, qty: 1, price: -discount });
+  }
   if (currentTip > 0) {
     items.push({ name: 'Tip', qty: 1, price: currentTip });
   }
@@ -3338,6 +3360,23 @@ function updateOrderTotalWithTip() {
   const tipRow = document.getElementById('tip-row');
   const tipDisplay = document.getElementById('tip-display');
   const totalEl = document.getElementById('order-total');
+  // Bundle discount row
+  const discount = bundleDiscountAmount();
+  let discRow = document.getElementById('discount-row');
+  if (discount > 0) {
+    if (!discRow) {
+      discRow = document.createElement('div');
+      discRow.id = 'discount-row';
+      discRow.className = 'order-total-row';
+      discRow.style.cssText = 'display:flex';
+      const tr = document.getElementById('tip-row');
+      if (tr && tr.parentNode) tr.parentNode.insertBefore(discRow, tr);
+    }
+    discRow.style.display = 'flex';
+    discRow.innerHTML = `<span class="label" style="font-weight:400;color:#4ade80">Bundle Discount (${BUNDLE_DISCOUNT_PCT}% off)</span><span style="color:#4ade80">−$${discount.toFixed(2)}</span>`;
+  } else if (discRow) {
+    discRow.style.display = 'none';
+  }
   if (tipRow && tipDisplay) {
     if (currentTip > 0) {
       tipRow.style.display = 'flex';
@@ -3429,6 +3468,7 @@ function renderCheckout() {
     </div>
   `).join('');
   document.getElementById('order-total').textContent = '$' + cartTotal().toFixed(2);
+  renderUpsell();
   // Reset tip selection on checkout render
   currentTip = 0;
   const acceptBox = document.getElementById('accept-terms');
@@ -3454,6 +3494,74 @@ function renderCheckout() {
 
   // Show payment limit warning and disable pay buttons if out of range
   refreshLimitWarning();
+  // Reflect any bundle discount in the total
+  updateOrderTotalWithTip();
+}
+
+// ════════════════════════════════════════
+// UPSELL — "You might also like" + bundle nudge
+// ════════════════════════════════════════
+function renderUpsell() {
+  const container = document.getElementById('upsell-section');
+  if (!container) return;
+  if (!cart.length) { container.innerHTML = ''; return; }
+
+  // Find related products: same category as cart items, not already in cart, in stock
+  const cartIds = new Set(cart.map(c => c.id));
+  const cartCats = [...new Set(cart.map(c => c.category).filter(Boolean))];
+  let related = allProducts.filter(p => {
+    if (cartIds.has(p.id)) return false;
+    const unlimited = (p.stock === undefined || p.stock === null);
+    if (!unlimited && p.stock <= 0) return false;
+    return cartCats.includes(p.category);
+  });
+  // Fallback: if none in same category, show any in-stock products
+  if (!related.length) {
+    related = allProducts.filter(p => {
+      if (cartIds.has(p.id)) return false;
+      const unlimited = (p.stock === undefined || p.stock === null);
+      return unlimited || p.stock > 0;
+    });
+  }
+  // Shuffle and take 3
+  related = related.sort(() => Math.random() - 0.5).slice(0, 3);
+
+  const distinct = distinctProductCount();
+  const nudge = distinct < BUNDLE_MIN_ITEMS
+    ? `<div style="font-size:12px;color:#fbbf24;margin-bottom:12px">🎁 Add one more item and save ${BUNDLE_DISCOUNT_PCT}% on your whole order!</div>`
+    : `<div style="font-size:12px;color:#4ade80;margin-bottom:12px">✓ Bundle discount applied — ${BUNDLE_DISCOUNT_PCT}% off!</div>`;
+
+  if (!related.length) { container.innerHTML = ''; return; }
+
+  container.innerHTML = `
+    <div style="padding:16px 0;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">You might also like</div>
+      ${nudge}
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${related.map(p => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+            <div style="min-width:0;flex:1">
+              <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+              <div style="font-size:12px;color:var(--accent1);font-weight:600">$${p.price.toFixed(2)}</div>
+            </div>
+            <button onclick="addUpsellItem('${p.id}')" style="background:var(--accent-btn);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">+ Add</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function addUpsellItem(productId) {
+  const p = allProducts.find(x => x.id === productId);
+  if (!p) return;
+  const existing = cart.find(c => c.id === p.id);
+  if (existing) existing.qty += 1;
+  else cart.push({ id: p.id, name: p.name, price: p.price, qty: 1, category: p.category, desc: p.desc });
+  saveCart();
+  updateCartUI();
+  renderCheckout(); // re-render to show new item + discount
+  showToast('Added to your order');
 }
 
 function refreshLimitWarning() {
