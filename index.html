@@ -2993,7 +2993,7 @@ function renderFeatured() {
     <div class="product-row">
       <div style="cursor:pointer" onclick="openProduct('${p.id}')">
         <div class="name">${i===0?'<span style="color:var(--accent1);font-size:11px;font-weight:700;margin-right:6px">★ BEST SELLER</span>':''}${p.name}</div>
-        <div class="tags"><span class="tag">${p.desc}</span>${p.sold>0?`<span class="tag" style="color:var(--accent1)">${p.sold} sold</span>`:''}</div>
+        <div class="tags"><span class="tag">${p.desc}</span>${getProductSoldDisplay(p.id)?`<span class="tag" style="color:#fbbf24">🔥 ${getProductSoldDisplay(p.id)} sold</span>`:''}</div>
       </div>
       <div class="price">$${p.price.toFixed(2)}</div>
       <button class="btn-add" onclick="addToCart('${p.id}')">Add to Cart</button>
