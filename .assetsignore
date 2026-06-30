@@ -1,0 +1,5 @@
+.git
+.git/**
+frontend-worker.js
+wrangler.jsonc
+worker.js
