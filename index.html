@@ -2773,6 +2773,11 @@ const PAGE_DESC = {
 function navigate(page, skipPush) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  // Remove product schema when leaving product pages
+  if (page !== 'product') {
+    const ps = document.getElementById('product-schema');
+    if (ps) ps.remove();
+  }
   const el = document.getElementById('page-' + page);
   if (el) el.classList.add('active');
   const navEl = document.getElementById('nav-' + page);
@@ -3117,6 +3122,8 @@ function openProduct(id, skipPush) {
   else document.title = 'Buy ' + p.name + ' – DigitalItems.Store';
   const metaEl = document.querySelector('meta[name="description"]');
   if (metaEl && p.metaDesc) metaEl.setAttribute('content', p.metaDesc);
+
+  injectProductSchema(p);
 
   // Parse spec from desc string (e.g. "Karma: 100+ · Created: 2020")
   const specRows = p.desc.split('·').map(s => s.trim()).filter(Boolean).map(s => {
@@ -4564,6 +4571,77 @@ function setMeta(name, content) {
   let m = document.querySelector(`meta[name="${name}"]`);
   if (!m) { m = document.createElement('meta'); m.setAttribute('name', name); document.head.appendChild(m); }
   m.setAttribute('content', content);
+}
+
+// Inject Product structured data (schema.org) for SEO rich results
+function injectProductSchema(p) {
+  // Remove any previous product schema
+  const old = document.getElementById('product-schema');
+  if (old) old.remove();
+
+  const inStock = (p.stock === undefined || p.stock === null || p.stock > 0);
+  const img = p.image || (typeof CATEGORY_IMG !== 'undefined' ? (CATEGORY_IMG[p.category] || CATEGORY_IMG.twitter) : '');
+  const imgUrl = img && img.startsWith('http') ? img : ('https://digitalitems.store' + (img || ''));
+  const slug = p.slug || (typeof slugify === 'function' ? slugify(p.name) : '');
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": p.name,
+    "description": p.metaDesc || p.desc || ('Buy ' + p.name + ' at DigitalItems.Store'),
+    "image": imgUrl,
+    "brand": { "@type": "Brand", "name": "DigitalItems.Store" },
+    "offers": {
+      "@type": "Offer",
+      "url": "https://digitalitems.store/products/" + slug,
+      "priceCurrency": "USD",
+      "price": Number(p.price).toFixed(2),
+      "availability": inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "itemCondition": "https://schema.org/NewCondition",
+      "seller": { "@type": "Organization", "name": "DigitalItems LTD" },
+      "hasMerchantReturnPolicy": {
+        "@type": "MerchantReturnPolicy",
+        "applicableCountry": "GB",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted",
+        "merchantReturnDays": 0,
+        "returnMethod": "https://schema.org/ReturnByMail",
+        "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility"
+      },
+      "shippingDetails": {
+        "@type": "OfferShippingDetails",
+        "shippingRate": {
+          "@type": "MonetaryAmount",
+          "value": "0.00",
+          "currency": "USD"
+        },
+        "shippingDestination": {
+          "@type": "DefinedRegion",
+          "addressCountry": "GB"
+        },
+        "deliveryTime": {
+          "@type": "ShippingDeliveryTime",
+          "handlingTime": {
+            "@type": "QuantitativeValue",
+            "minValue": 0,
+            "maxValue": 1,
+            "unitCode": "DAY"
+          },
+          "transitTime": {
+            "@type": "QuantitativeValue",
+            "minValue": 0,
+            "maxValue": 1,
+            "unitCode": "DAY"
+          }
+        }
+      }
+    }
+  };
+
+  const s = document.createElement('script');
+  s.type = 'application/ld+json';
+  s.id = 'product-schema';
+  s.textContent = JSON.stringify(schema);
+  document.head.appendChild(s);
 }
 
 async function generateBlog() {
