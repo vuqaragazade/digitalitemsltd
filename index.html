@@ -1510,6 +1510,21 @@
 </head>
 <body>
 
+<!-- Anti-flash: hide home page instantly if the URL is a different route (runs before paint) -->
+<script>
+(function() {
+  var path = location.pathname;
+  var hash = location.hash;
+  // If not the homepage, hide the default-active home page immediately to prevent a flash
+  if ((path && path !== '/' && path !== '/index.html') || hash === '#admin') {
+    var style = document.createElement('style');
+    style.id = 'anti-flash-style';
+    style.textContent = '#page-home{display:none !important;}';
+    document.head.appendChild(style);
+  }
+})();
+</script>
+
 <!-- HEADER -->
 <header>
   <div class="header-inner">
@@ -2771,6 +2786,9 @@ const PAGE_DESC = {
 };
 
 function navigate(page, skipPush) {
+  // Remove anti-flash style once real routing takes over
+  var af = document.getElementById('anti-flash-style');
+  if (af) af.remove();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
   // Remove product schema when leaving product pages
