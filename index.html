@@ -561,7 +561,7 @@
       top: 88px;
     }
 
-    .product-detail-image img { width: 100%; max-width: 260px; border-radius: var(--radius-sm); }
+    .product-detail-image img { width: 100%; max-width: 260px; aspect-ratio: 1 / 1; object-fit: contain; border-radius: var(--radius-sm); }
 
     .product-detail-info h1 {
       font-family: var(--font-display);
@@ -3178,7 +3178,7 @@ function openProduct(id, skipPush) {
       </div>`;
 
   document.getElementById('product-detail-content').innerHTML = `
-    <div class="product-detail-image"><img src="${img}" alt="${p.name}" /></div>
+    <div class="product-detail-image"><img src="${img}" alt="${p.name}" width="320" height="320" fetchpriority="high" decoding="async" style="aspect-ratio:1/1;object-fit:contain" /></div>
     <div class="product-detail-info">
       <div class="tags" style="margin-bottom:12px"><span class="tag">${catLabel}</span></div>
       <h1>${p.name}</h1>
@@ -5911,12 +5911,18 @@ handlePaymentRedirect();
   if (location.hash === '#admin') { navigate('admin', true); return; }
   const path = location.pathname;
   if (path.startsWith('/products/') || path.startsWith('/product/')) {
-    // Wait for products to load, then resolve slug/id
-    setTimeout(() => {
-      const result = pageFromPath(path);
-      if (result.productId) openProduct(result.productId, true);
+    // Open the product as soon as products are loaded (no fixed delay)
+    const tryOpen = (attempt) => {
+      if (allProducts && allProducts.length) {
+        const result = pageFromPath(path);
+        if (result.productId) { openProduct(result.productId, true); return; }
+        // slug didn't match a product
+        navigate('home', true); return;
+      }
+      if (attempt < 40) { setTimeout(() => tryOpen(attempt + 1), 50); } // up to ~2s, polling every 50ms
       else navigate('home', true);
-    }, 700);
+    };
+    tryOpen(0);
     return;
   }
   const result = pageFromPath(path);
