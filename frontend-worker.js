@@ -30,31 +30,32 @@ export default {
       const slug = url.pathname.replace('/blog/', '').replace(/\/$/, '');
       if (slug) {
         try {
-          // Fetch the static HTML shell and the blog data in parallel
-          const [assetRes, blogRes] = await Promise.all([
-            env.ASSETS.fetch(new Request(url.origin + '/index.html', request)),
-            fetch(BACKEND + '/blog?slug=' + encodeURIComponent(slug))
-          ]);
+          // Get the static HTML shell (use a clean GET request to assets)
+          const assetRes = await env.ASSETS.fetch(new Request('https://assets.local/index.html'));
           let html = await assetRes.text();
+
+          // Fetch the blog data from the backend
+          const blogRes = await fetch(BACKEND + '/blog?slug=' + encodeURIComponent(slug));
           const data = await blogRes.json();
           const blog = data && data.blog;
+
           if (blog) {
             const img = blog.image
               ? (blog.image.startsWith('http') ? blog.image : BACKEND + blog.image)
               : '';
             const esc = (s) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
             let inject = '';
-            // Preload the LCP hero image so the browser fetches it right away
             if (img) {
               inject += `<link rel="preload" as="image" href="${esc(img)}" fetchpriority="high" />`;
             }
-            // SEO meta + Open Graph (helps social shares and crawlers)
             if (blog.title) inject += `<meta property="og:title" content="${esc(blog.metaTitle || blog.title)}" />`;
             if (blog.metaDescription || blog.excerpt) inject += `<meta property="og:description" content="${esc(blog.metaDescription || blog.excerpt)}" />`;
             if (img) inject += `<meta property="og:image" content="${esc(img)}" />`;
             inject += `<meta property="og:type" content="article" />`;
             inject += `<link rel="canonical" href="https://digitalitems.store/blog/${esc(slug)}" />`;
-            // Insert right after <head> so preload is discovered as early as possible
+            // Marker comment so we can verify the worker ran
+            inject += `<!-- blog-ssr:${esc(slug)} -->`;
+
             html = html.replace('<head>', '<head>' + inject);
 
             return new Response(html, {
@@ -65,10 +66,19 @@ export default {
             });
           }
           // No blog found — serve the shell unchanged
-          return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+          return new Response(html, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' }
+          });
         } catch (e) {
-          // On any error, fall back to normal static serving
-          return env.ASSETS.fetch(request);
+          // On error, serve the shell with a marker so we can see the error path ran
+          try {
+            const assetRes = await env.ASSETS.fetch(new Request('https://assets.local/index.html'));
+            let html = await assetRes.text();
+            html = html.replace('<head>', '<head><!-- blog-ssr-error -->');
+            return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+          } catch (e2) {
+            return env.ASSETS.fetch(request);
+          }
         }
       }
     }
