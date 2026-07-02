@@ -64,9 +64,13 @@ export default {
             if (blog.metaDescription || blog.excerpt) inject += `<meta property="og:description" content="${esc(blog.metaDescription || blog.excerpt)}" />`;
             if (img) inject += `<meta property="og:image" content="${esc(img)}" />`;
             inject += `<meta property="og:type" content="article" />`;
-            inject += `<link rel="canonical" href="https://digitalitems.store/blog/${esc(slug)}" />`;
             if (blog.metaTitle || blog.title) inject += `<title>${esc(blog.metaTitle || blog.title)}</title>`;
             html = html.replace('<head>', '<head>' + inject);
+            // Replace the static canonical with the blog-specific one (avoid duplicates)
+            html = html.replace(
+              '<link rel="canonical" href="https://digitalitems.store/" />',
+              `<link rel="canonical" href="https://digitalitems.store/blog/${esc(slug)}" />`
+            );
 
             // Body injection: pre-render the blog content into the container so the
             // browser paints text + image immediately (fixes LCP and content-shift CLS).
