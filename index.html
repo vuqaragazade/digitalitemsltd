@@ -3324,16 +3324,35 @@ function cartTotal() { return cart.reduce((s, c) => s + c.price * c.qty, 0); }
 // ════════════════════════════════════════
 const BUNDLE_DISCOUNT_PCT = 10;       // percent off
 const BUNDLE_MIN_ITEMS = 2;           // distinct products required
+const BUNDLE_MIN_CART = 10;           // cart must reach this ($) before any discount
 
 function distinctProductCount() {
   return cart.filter(c => c.id !== 'tip').length;
 }
 
+// Cheapest single product in the cart (used to cap the discount so we never lose money)
+function cheapestCartItemPrice() {
+  const prods = cart.filter(c => c.id !== 'tip');
+  if (!prods.length) return 0;
+  return Math.min(...prods.map(c => c.price));
+}
+
 function bundleDiscountAmount() {
-  if (distinctProductCount() >= BUNDLE_MIN_ITEMS) {
-    return cartTotal() * (BUNDLE_DISCOUNT_PCT / 100);
-  }
-  return 0;
+  // Requires 2+ distinct products AND cart at/above the minimum
+  if (distinctProductCount() < BUNDLE_MIN_ITEMS) return 0;
+  if (cartTotal() < BUNDLE_MIN_CART) return 0;
+  const raw = cartTotal() * (BUNDLE_DISCOUNT_PCT / 100);
+  // Safety cap: discount never exceeds 90% of the cheapest item, so every added
+  // item still nets a profit (a cheap add-on can't make the discount exceed its value).
+  const cap = cheapestCartItemPrice() * 0.9;
+  return Math.min(raw, cap);
+}
+
+// How much more the customer needs to add to unlock the discount (shown as a dollar goal)
+function amountToUnlockBundle() {
+  if (distinctProductCount() < BUNDLE_MIN_ITEMS) return null; // needs another item first
+  const remaining = BUNDLE_MIN_CART - cartTotal();
+  return remaining > 0 ? remaining : 0;
 }
 
 // ════════════════════════════════════════
@@ -3380,7 +3399,7 @@ function buildOrderItems() {
   const items = cart.map(c => ({name: c.name, qty: c.qty, price: c.price}));
   const discount = bundleDiscountAmount();
   if (discount > 0) {
-    items.push({ name: `Bundle Discount (${BUNDLE_DISCOUNT_PCT}% off)`, qty: 1, price: -discount });
+    items.push({ name: 'Bundle Discount', qty: 1, price: -discount });
   }
   if (currentTip > 0) {
     items.push({ name: 'Tip', qty: 1, price: currentTip });
@@ -3405,7 +3424,7 @@ function updateOrderTotalWithTip() {
       if (tr && tr.parentNode) tr.parentNode.insertBefore(discRow, tr);
     }
     discRow.style.display = 'flex';
-    discRow.innerHTML = `<span class="label" style="font-weight:400;color:#4ade80">Bundle Discount (${BUNDLE_DISCOUNT_PCT}% off)</span><span style="color:#4ade80">−$${discount.toFixed(2)}</span>`;
+    discRow.innerHTML = `<span class="label" style="font-weight:400;color:#4ade80">Discount</span><span style="color:#4ade80">−$${discount.toFixed(2)}</span>`;
   } else if (discRow) {
     discRow.style.display = 'none';
   }
@@ -3559,9 +3578,21 @@ function renderUpsell() {
   related = related.sort(() => Math.random() - 0.5).slice(0, 3);
 
   const distinct = distinctProductCount();
-  const nudge = distinct < BUNDLE_MIN_ITEMS
-    ? `<div style="font-size:12px;color:#fbbf24;margin-bottom:12px">🎁 Add one more item and save ${BUNDLE_DISCOUNT_PCT}% on your whole order!</div>`
-    : `<div style="font-size:12px;color:#4ade80;margin-bottom:12px">✓ Bundle discount applied — ${BUNDLE_DISCOUNT_PCT}% off!</div>`;
+  const discount = bundleDiscountAmount();
+  const toUnlock = amountToUnlockBundle();
+  let nudge;
+  if (discount > 0) {
+    // Discount is active — show the saved amount (dollar, not percentage)
+    nudge = `<div style="font-size:12px;color:#4ade80;margin-bottom:12px">✓ Discount unlocked — you're saving $${discount.toFixed(2)}!</div>`;
+  } else if (distinct < BUNDLE_MIN_ITEMS) {
+    // Needs a second product
+    nudge = `<div style="font-size:12px;color:#fbbf24;margin-bottom:12px">🎁 Add another item to unlock a discount on your order!</div>`;
+  } else if (toUnlock && toUnlock > 0) {
+    // Has 2+ items but cart below the minimum — show the exact dollar goal
+    nudge = `<div style="font-size:12px;color:#fbbf24;margin-bottom:12px">🎁 Add $${toUnlock.toFixed(2)} more to unlock a discount on your order!</div>`;
+  } else {
+    nudge = '';
+  }
 
   if (!related.length) { container.innerHTML = ''; return; }
 
