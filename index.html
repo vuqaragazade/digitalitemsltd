@@ -4561,26 +4561,32 @@ async function openBlogPost(slug, skipPush) {
     if (canon) canon.setAttribute('href', 'https://digitalitems.store/blog/' + b.slug);
     const img = b.image ? (b.image.startsWith('http') ? b.image : WORKER_URL + b.image) : '';
     const hashtags = (b.hashtags||[]).length ? `<div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">${b.hashtags.map(h=>`<span style="font-size:13px;color:var(--accent1)">${h}</span>`).join('')}</div>` : '';
-    // Count this view once per visitor per post (using localStorage to dedupe)
+    // Render immediately (don't block on view-count). Show cached view count first.
     let viewCount = b.views || 0;
-    try {
-      const seenKey = 'di_blog_seen_' + slug;
-      if (!localStorage.getItem(seenKey)) {
-        localStorage.setItem(seenKey, '1');
-        const vr = await fetch(WORKER_URL + '/blog-view?slug=' + encodeURIComponent(slug), { method: 'POST' });
-        const vd = await vr.json();
-        if (vd && typeof vd.views === 'number') viewCount = vd.views;
-      }
-    } catch(e) {}
     el.innerHTML = `
       ${b.category ? `<span style="font-size:12px;color:var(--accent1);text-transform:uppercase;letter-spacing:0.5px">${b.category}</span>` : ''}
       <h1 style="margin:10px 0">${b.title}</h1>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${new Date(b.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} · 👁 ${viewCount} views</div>
-      ${img ? `<img src="${img}" width="720" height="480" fetchpriority="high" decoding="async" style="width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;border-radius:12px;margin-bottom:24px" alt="${b.title}" />` : ''}
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${new Date(b.date).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} · 👁 <span id="blog-view-count">${viewCount}</span> views</div>
+      ${img ? `<img src="${img}" width="720" height="480" fetchpriority="high" decoding="async" style="width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;border-radius:12px;margin-bottom:24px;background:var(--bg3)" alt="${b.title}" />` : ''}
       <div class="blog-body" style="line-height:1.7;font-size:16px">${b.content||''}</div>
       ${hashtags}
     `;
     window.scrollTo(0,0);
+    // Count this view AFTER render (non-blocking), once per visitor per post
+    try {
+      const seenKey = 'di_blog_seen_' + slug;
+      if (!localStorage.getItem(seenKey)) {
+        localStorage.setItem(seenKey, '1');
+        fetch(WORKER_URL + '/blog-view?slug=' + encodeURIComponent(slug), { method: 'POST' })
+          .then(r => r.json())
+          .then(vd => {
+            if (vd && typeof vd.views === 'number') {
+              const vc = document.getElementById('blog-view-count');
+              if (vc) vc.textContent = vd.views;
+            }
+          }).catch(()=>{});
+      }
+    } catch(e) {}
   } catch(e) {
     el.innerHTML = '<h1>Could not load post</h1>';
   }
@@ -5362,6 +5368,8 @@ function openCookieSettings() {
 }
 
 async function injectTracking() {
+  if (window._trackingInjected) return; // prevent double injection
+  window._trackingInjected = true;
   try {
     const res = await fetch(WORKER_URL + '/tracking-public');
     const data = await res.json();
@@ -5900,9 +5908,19 @@ loadSoldCounts();
 initSalesNotifications();
 loadPagesFromServer();
 loadPaymentLimits();
-// Soft consent (implied): tracking runs unless the user explicitly declined
+// Soft consent (implied): tracking runs unless the user explicitly declined.
+// Defer tracking until the page is idle/interactive so it doesn't block LCP.
 if (localStorage.getItem('di_cookie_consent') !== 'declined') {
-  injectTracking();
+  const startTracking = () => { injectTracking(); };
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(startTracking, { timeout: 3500 });
+  } else {
+    setTimeout(startTracking, 2500);
+  }
+  // Also start on first interaction (whichever comes first)
+  ['scroll','click','touchstart','keydown'].forEach(ev =>
+    window.addEventListener(ev, function once(){ startTracking(); ['scroll','click','touchstart','keydown'].forEach(e=>window.removeEventListener(e, once)); }, { once: true, passive: true })
+  );
 }
 initCookieConsent();
 handlePaymentRedirect();
