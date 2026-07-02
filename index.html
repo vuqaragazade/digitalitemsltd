@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <!-- ═══════════════════════════════════════════════════
-       ANALYTICS  —  dataLayer for GA4 / Google Ads / GTM
+       ANALYTICS — dataLayer for GA4 / Google Ads / GTM
        To activate: paste your GTM or GA4 snippet where marked below.
        All e-commerce events (view_item, add_to_cart, purchase, etc.)
        are already pushed to dataLayer by the site.
@@ -1995,7 +1995,7 @@
 <div class="page" id="page-blogpost">
   <div class="static-page" style="max-width:720px">
     <a href="/blog" onclick="navigate('blog');return false" style="color:var(--accent1);cursor:pointer;font-size:13px">‹ Back to Blog</a>
-    <div id="blogpost-content" style="margin-top:16px"></div>
+    <div id="blogpost-content" style="margin-top:16px;min-height:80vh"></div>
   </div>
 </div>
 
@@ -4545,6 +4545,30 @@ function filterBlogCategory(cat) {
 }
 
 async function openBlogPost(slug, skipPush) {
+  // If the server already prerendered this exact post, don't wipe it — just keep it
+  // and (optionally) refresh the view count. This preserves the fast LCP.
+  const pageEl = document.getElementById('page-blogpost');
+  const alreadyRendered = pageEl && pageEl.getAttribute('data-prerendered') === '1'
+    && location.pathname === '/blog/' + slug;
+  if (alreadyRendered) {
+    navigate('blogpost', true);
+    if (!skipPush) history.pushState({page:'blogpost', slug}, '', '/blog/' + slug);
+    // Clear the flag so future in-app navigation re-renders normally
+    pageEl.removeAttribute('data-prerendered');
+    // Bump the view count in the background
+    try {
+      const seenKey = 'di_blog_seen_' + slug;
+      if (!localStorage.getItem(seenKey)) {
+        localStorage.setItem(seenKey, '1');
+        fetch(WORKER_URL + '/blog-view?slug=' + encodeURIComponent(slug), { method: 'POST' })
+          .then(r => r.json())
+          .then(vd => { if (vd && typeof vd.views === 'number') { const vc = document.getElementById('blog-view-count'); if (vc) vc.textContent = vd.views; } })
+          .catch(()=>{});
+      }
+    } catch(e) {}
+    window.scrollTo(0,0);
+    return;
+  }
   navigate('blogpost', true);
   if (!skipPush) history.pushState({page:'blogpost', slug}, '', '/blog/' + slug);
   const el = document.getElementById('blogpost-content');
