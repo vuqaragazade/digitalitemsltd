@@ -3,7 +3,7 @@
 <head>
   <!-- ═══════════════════════════════════════════════════
        ANALYTICS — dataLayer for GA4 / Google Ads / GTM
-       To activate: paste your GTM or GA4 snippet where marked      below.
+       To activate: paste your GTM or GA4 snippet where marked below.
        All e-commerce events (view_item, add_to_cart, purchase, etc.)
        are already pushed to dataLayer by the site.
        ═══════════════════════════════════════════════════ -->
@@ -1294,7 +1294,7 @@
     .office-block { font-size: 12px; color: var(--muted); line-height: 1.9; }
     .office-title { display: block; color: var(--text); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
 
-    .footer-col h4 {
+    .footer-col .footer-heading {
       font-family: var(--font-display);
       font-size: 13px;
       font-weight: 600;
@@ -1566,6 +1566,7 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<main id="main-content">
 <!-- ═══════════════ HOME PAGE ═══════════════ -->
 <div class="page active" id="page-home">
 
@@ -2567,6 +2568,8 @@
 </div>
 
 <!-- FOOTER -->
+</main>
+
 <footer>
   <div class="footer-inner">
     <div style="text-align:center;padding-bottom:32px;margin-bottom:32px;border-bottom:1px solid var(--border)">
@@ -2602,18 +2605,18 @@
         </div>
       </div>
       <div class="footer-col">
-        <h4>Products</h4>
+        <div class="footer-heading">Products</div>
         <a href="/twitter-accounts" onclick="navigate('twitter');return false">Twitter Accounts</a>
         <a href="/reddit-accounts" onclick="navigate('reddit');return false">Reddit Accounts</a>
         <a href="/reddit-marketing" onclick="navigate('marketing');return false">Reddit Marketing</a>
       </div>
       <div class="footer-col">
-        <h4>Company</h4>
+        <div class="footer-heading">Company</div>
         <a href="/about" onclick="navigate('about');return false">About Us</a>
         <a href="/contact" onclick="navigate('contact');return false">Contact</a>
       </div>
       <div class="footer-col">
-        <h4>Legal</h4>
+        <div class="footer-heading">Legal</div>
         <a href="/terms" onclick="navigate('terms');return false">Terms of Service</a>
         <a href="/refund-policy" onclick="navigate('refund');return false">Refund Policy</a>
         <a href="/privacy-policy" onclick="navigate('privacy');return false">Privacy Policy</a>
