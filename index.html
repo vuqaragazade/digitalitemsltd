@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <!-- ═══════════════════════════════════════════════════
-       ANALYTICS    — dataLayer for GA4 / Google Ads / GTM
+       ANALYTICS — dataLayer for GA4 / Google Ads / GTM
        To activate: paste your GTM or GA4 snippet where marked below.
        All e-commerce events (view_item, add_to_cart, purchase, etc.)
        are already pushed to dataLayer by the site.
@@ -3324,35 +3324,40 @@ function cartTotal() { return cart.reduce((s, c) => s + c.price * c.qty, 0); }
 // ════════════════════════════════════════
 const BUNDLE_DISCOUNT_PCT = 10;       // percent off
 const BUNDLE_MIN_ITEMS = 2;           // distinct products required
-const BUNDLE_MIN_CART = 10;           // cart must reach this ($) before any discount
+const BUNDLE_MIN_ITEM_PRICE = 10;     // EVERY product must cost at least this ($) to qualify
 
 function distinctProductCount() {
   return cart.filter(c => c.id !== 'tip').length;
 }
 
-// Cheapest single product in the cart (used to cap the discount so we never lose money)
+// Cheapest single product in the cart
 function cheapestCartItemPrice() {
   const prods = cart.filter(c => c.id !== 'tip');
   if (!prods.length) return 0;
   return Math.min(...prods.map(c => c.price));
 }
 
-function bundleDiscountAmount() {
-  // Requires 2+ distinct products AND cart at/above the minimum
-  if (distinctProductCount() < BUNDLE_MIN_ITEMS) return 0;
-  if (cartTotal() < BUNDLE_MIN_CART) return 0;
-  const raw = cartTotal() * (BUNDLE_DISCOUNT_PCT / 100);
-  // Safety cap: discount never exceeds 90% of the cheapest item, so every added
-  // item still nets a profit (a cheap add-on can't make the discount exceed its value).
-  const cap = cheapestCartItemPrice() * 0.9;
-  return Math.min(raw, cap);
+// True when every product in the cart costs at least the minimum
+function allItemsQualify() {
+  const prods = cart.filter(c => c.id !== 'tip');
+  return prods.length > 0 && prods.every(c => c.price >= BUNDLE_MIN_ITEM_PRICE);
 }
 
-// How much more the customer needs to add to unlock the discount (shown as a dollar goal)
-function amountToUnlockBundle() {
-  if (distinctProductCount() < BUNDLE_MIN_ITEMS) return null; // needs another item first
-  const remaining = BUNDLE_MIN_CART - cartTotal();
-  return remaining > 0 ? remaining : 0;
+function bundleDiscountAmount() {
+  // Requires 2+ distinct products AND every product priced at/above the minimum
+  if (distinctProductCount() < BUNDLE_MIN_ITEMS) return 0;
+  if (!allItemsQualify()) return 0;
+  // 10% of the total. Safe by design: since every item is >= $10, a 10% discount
+  // can never exceed any single item's value, so you always profit.
+  return cartTotal() * (BUNDLE_DISCOUNT_PCT / 100);
+}
+
+// Returns a hint object describing what's needed to unlock the discount
+function bundleUnlockHint() {
+  const prods = cart.filter(c => c.id !== 'tip');
+  if (prods.length < BUNDLE_MIN_ITEMS) return { type: 'need_item' };
+  if (!allItemsQualify()) return { type: 'need_pricier' };
+  return { type: 'unlocked' };
 }
 
 // ════════════════════════════════════════
@@ -3574,22 +3579,24 @@ function renderUpsell() {
       return unlimited || p.stock > 0;
     });
   }
-  // Shuffle and take 3
-  related = related.sort(() => Math.random() - 0.5).slice(0, 3);
+  // Shuffle, then prioritise products that qualify for the bundle ($10+) so
+  // adding one can actually unlock the discount.
+  related = related.sort(() => Math.random() - 0.5);
+  related.sort((a, b) => (b.price >= BUNDLE_MIN_ITEM_PRICE ? 1 : 0) - (a.price >= BUNDLE_MIN_ITEM_PRICE ? 1 : 0));
+  related = related.slice(0, 3);
 
-  const distinct = distinctProductCount();
   const discount = bundleDiscountAmount();
-  const toUnlock = amountToUnlockBundle();
+  const hint = bundleUnlockHint();
   let nudge;
   if (discount > 0) {
     // Discount is active — show the saved amount (dollar, not percentage)
     nudge = `<div style="font-size:12px;color:#4ade80;margin-bottom:12px">✓ Discount unlocked — you're saving $${discount.toFixed(2)}!</div>`;
-  } else if (distinct < BUNDLE_MIN_ITEMS) {
-    // Needs a second product
-    nudge = `<div style="font-size:12px;color:#fbbf24;margin-bottom:12px">🎁 Add another item to unlock a discount on your order!</div>`;
-  } else if (toUnlock && toUnlock > 0) {
-    // Has 2+ items but cart below the minimum — show the exact dollar goal
-    nudge = `<div style="font-size:12px;color:#fbbf24;margin-bottom:12px">🎁 Add $${toUnlock.toFixed(2)} more to unlock a discount on your order!</div>`;
+  } else if (hint.type === 'need_item') {
+    // Needs a second product — steer them toward the qualifying (pricier) items below
+    nudge = `<div style="font-size:12px;color:#fbbf24;margin-bottom:12px">🎁 Add one of the items below to unlock a discount on your order!</div>`;
+  } else if (hint.type === 'need_pricier') {
+    // Has 2+ items but a cheap one disqualifies — nudge toward pricier products
+    nudge = `<div style="font-size:12px;color:#fbbf24;margin-bottom:12px">🎁 Add one of the featured items below to unlock a discount!</div>`;
   } else {
     nudge = '';
   }
