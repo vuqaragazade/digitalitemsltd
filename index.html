@@ -1544,6 +1544,7 @@
       <button class="btn btn-ghost" onclick="navigate('login')" id="header-login-btn">Login</button>
       <button class="btn btn-ghost" onclick="navigate('account')" id="header-account-btn" style="display:none">Account</button>
       <button class="btn btn-ghost" onclick="universalLogout()" id="header-logout-btn" style="display:none">Logout</button>
+      <button class="btn btn-ghost" onclick="openSearch()" id="header-search-btn" aria-label="Search" style="padding:8px 12px">🔍</button>
       <button class="cart-btn" onclick="openCart()">🛒 <span class="cart-count" id="cart-count">0</span></button>
       <button class="mobile-menu-btn" onclick="toggleMobileMenu()" id="mobile-menu-btn">☰</button>
     </div>
@@ -1565,6 +1566,17 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- SEARCH OVERLAY -->
+<div id="search-overlay" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.85);padding:0" onclick="if(event.target===this)closeSearch()">
+  <div style="max-width:680px;margin:0 auto;padding:24px 20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <input type="text" id="search-input" autocomplete="off" placeholder="Search products and posts…" oninput="runSearch(this.value)" onkeydown="if(event.key==='Escape')closeSearch()" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;color:var(--text);font-size:16px;outline:none" />
+      <span onclick="closeSearch()" style="cursor:pointer;color:#fff;font-size:26px;line-height:1;padding:4px">×</span>
+    </div>
+    <div id="search-results" style="max-height:70vh;overflow-y:auto;margin-top:12px"></div>
+  </div>
+</div>
 
 <!-- SEND DETAILS EMAIL MODAL -->
 <div id="send-details-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);overflow-y:auto;padding:24px">
@@ -3529,6 +3541,96 @@ function renderCartSidebar() {
       <div class="cart-item-price">$${(item.price * item.qty).toFixed(2)}</div>
     </div>
   `).join('');
+}
+
+// ════════════════════════════════════════
+// SITE SEARCH (products + blog posts)
+// ════════════════════════════════════════
+let searchBlogsCache = null;
+
+function openSearch() {
+  document.getElementById('search-overlay').style.display = 'block';
+  const input = document.getElementById('search-input');
+  input.value = '';
+  document.getElementById('search-results').innerHTML =
+    '<div style="color:var(--muted);text-align:center;padding:20px;font-size:14px">Type to search products and blog posts…</div>';
+  setTimeout(() => input.focus(), 50);
+  // Preload blog list in the background for searching
+  if (searchBlogsCache === null) {
+    fetch(WORKER_URL + '/blogs').then(r => r.json()).then(d => {
+      searchBlogsCache = d.blogs || [];
+    }).catch(() => { searchBlogsCache = []; });
+  }
+}
+
+function closeSearch() {
+  document.getElementById('search-overlay').style.display = 'none';
+}
+
+function runSearch(q) {
+  const query = (q || '').trim().toLowerCase();
+  const box = document.getElementById('search-results');
+  if (!query) {
+    box.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:14px">Type to search products and blog posts…</div>';
+    return;
+  }
+
+  // --- Products (primary) ---
+  const products = (allProducts || []).filter(p => {
+    const hay = ((p.name||'') + ' ' + (p.desc||'') + ' ' + (p.category||'') + ' ' + (p.fullDesc||'')).toLowerCase();
+    return hay.includes(query);
+  }).slice(0, 8);
+
+  // --- Blog posts (secondary) ---
+  const blogs = (searchBlogsCache || []).filter(b => {
+    const hay = ((b.title||'') + ' ' + (b.excerpt||'') + ' ' + (b.category||'') + ' ' + (b.metaDescription||'') + ' ' + ((b.hashtags||[]).join(' '))).toLowerCase();
+    return hay.includes(query);
+  }).slice(0, 6);
+
+  let html = '';
+
+  if (products.length) {
+    html += '<div style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:8px 4px">Products</div>';
+    html += products.map(p => `
+      <div onclick="selectSearchProduct('${p.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer">
+        <div style="min-width:0">
+          <div style="font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+          <div style="font-size:12px;color:var(--muted)">${p.category||''}</div>
+        </div>
+        <div style="color:var(--accent1);font-weight:600;font-size:14px;white-space:nowrap">$${(p.price||0).toFixed(2)}</div>
+      </div>
+    `).join('');
+  }
+
+  if (blogs.length) {
+    html += '<div style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin:14px 4px 8px">Blog posts</div>';
+    html += blogs.map(b => `
+      <div onclick="selectSearchBlog('${b.slug}')" style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer">
+        <span style="font-size:16px">📄</span>
+        <div style="min-width:0">
+          <div style="font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.title}</div>
+          <div style="font-size:12px;color:var(--muted)">${b.category||'Blog'}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  if (!products.length && !blogs.length) {
+    html = '<div style="color:var(--muted);text-align:center;padding:24px;font-size:14px">No results for “' + q + '”.' +
+      (searchBlogsCache === null ? '<br><span style="font-size:12px">(still loading posts…)</span>' : '') + '</div>';
+  }
+
+  box.innerHTML = html;
+}
+
+function selectSearchProduct(id) {
+  closeSearch();
+  openProduct(id);
+}
+
+function selectSearchBlog(slug) {
+  closeSearch();
+  openBlogPost(slug);
 }
 
 function openCart() {
