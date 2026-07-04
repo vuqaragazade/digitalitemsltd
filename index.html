@@ -2203,7 +2203,11 @@
           <!-- Preview / Edit area (hidden until generated) -->
           <div id="blog-preview" class="checkout-box" style="display:none;max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">Preview & Edit</h2>
-            <div id="blog-preview-image" style="margin-bottom:16px"></div>
+            <div id="blog-preview-image" style="margin-bottom:8px"></div>
+            <div id="blog-image-actions" style="margin-bottom:16px;display:none">
+              <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="regenerateBlogImage()">🔄 Regenerate Image</button>
+              <span id="blog-image-status" style="font-size:12px;color:var(--muted);margin-left:8px"></span>
+            </div>
             <div class="form-group"><label>Title</label><input type="text" id="blog-edit-title" /></div>
             <div class="form-group"><label>Slug (URL)</label><input type="text" id="blog-edit-slug" /></div>
             <div class="form-group"><label>Meta Title</label><input type="text" id="blog-edit-metatitle" /></div>
@@ -2211,8 +2215,9 @@
             <div class="form-group"><label>Excerpt</label><textarea id="blog-edit-excerpt" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:vertical"></textarea></div>
             <div class="form-group"><label>Content (HTML)</label><textarea id="blog-edit-content" rows="14" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical"></textarea></div>
             <div class="form-group"><label>Hashtags (comma-separated)</label><input type="text" id="blog-edit-hashtags" /></div>
-            <div style="display:flex;gap:10px;margin-top:8px">
+            <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
               <button class="btn btn-primary" onclick="publishBlog()">Publish</button>
+              <button class="btn btn-ghost" onclick="regenerateBlogText()">🔄 Regenerate Text</button>
               <button class="btn btn-ghost" onclick="document.getElementById('blog-preview').style.display='none'">Discard</button>
             </div>
             <div id="blog-publish-status" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
@@ -4788,13 +4793,86 @@ function fillBlogPreview(blog) {
   document.getElementById('blog-edit-content').value = blog.content || '';
   document.getElementById('blog-edit-hashtags').value = (blog.hashtags || []).join(', ');
   const imgEl = document.getElementById('blog-preview-image');
+  const imgActions = document.getElementById('blog-image-actions');
   if (blog.image) {
     const src = blog.image.startsWith('http') ? blog.image : (WORKER_URL + blog.image);
     imgEl.innerHTML = `<img src="${src}" loading="lazy" decoding="async" style="width:100%;border-radius:10px" alt="${blog.title}" />`;
+    if (imgActions) imgActions.style.display = 'block';
   } else {
     imgEl.innerHTML = '';
+    // Still allow generating an image even if none exists yet
+    if (imgActions) imgActions.style.display = 'block';
   }
   document.getElementById('blog-preview').scrollIntoView({behavior:'smooth'});
+}
+
+// Regenerate ONLY the text (title, content, meta…) — keeps the current image
+async function regenerateBlogText() {
+  const keywords = document.getElementById('blog-keywords').value.trim();
+  const category = document.getElementById('blog-category').value.trim();
+  const instructions = document.getElementById('blog-instructions').value.trim();
+  if (!keywords) { showToast('Enter target keywords first'); return; }
+  const status = document.getElementById('blog-publish-status');
+  status.innerHTML = '⏳ Rewriting the post (keeping your image)…';
+
+  // Preserve the existing image so we don't lose it
+  const keepImage = generatedBlog ? generatedBlog.image : null;
+
+  const siteLinks = [];
+  const BASE = 'https://digitalitems.store';
+  (allProducts || []).forEach(p => {
+    const slug = p.slug || slugify(p.name);
+    if (slug) siteLinks.push({ title: p.name, url: BASE + '/products/' + slug });
+  });
+  siteLinks.push({ title: 'Buy Aged Twitter Accounts', url: BASE + '/twitter-accounts' });
+  siteLinks.push({ title: 'Buy Reddit Accounts with Karma', url: BASE + '/reddit-accounts' });
+  siteLinks.push({ title: 'Reddit Marketing Services', url: BASE + '/reddit-marketing' });
+
+  try {
+    const res = await fetch(WORKER_URL + '/generate-blog', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ keywords, category, instructions, siteLinks, withImage: false })
+    });
+    const data = await res.json();
+    if (data.error) { status.textContent = 'Error: ' + data.error; return; }
+    // Keep the old image
+    data.blog.image = keepImage;
+    generatedBlog = data.blog;
+    fillBlogPreview(data.blog);
+    status.innerHTML = '<span style="color:#4ade80">✓ New text ready — image kept.</span>';
+  } catch(e) {
+    status.textContent = 'Regeneration failed: ' + e.message;
+  }
+}
+
+// Regenerate ONLY the image — keeps the current text (uses edited title/keywords)
+async function regenerateBlogImage() {
+  if (!generatedBlog) return;
+  const title = document.getElementById('blog-edit-title').value.trim() || generatedBlog.title;
+  const keywords = document.getElementById('blog-keywords').value.trim();
+  const slug = document.getElementById('blog-edit-slug').value.trim() || generatedBlog.slug;
+  const btnStatus = document.getElementById('blog-image-status');
+  btnStatus.textContent = '⏳ Generating new image…';
+
+  try {
+    const res = await fetch(WORKER_URL + '/generate-blog-image', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ title, keywords, imagePrompt: generatedBlog.imagePrompt, slug })
+    });
+    const data = await res.json();
+    if (data.error) { btnStatus.innerHTML = '<span style="color:#fbbf24">' + data.error + '</span>'; return; }
+    if (data.image) {
+      generatedBlog.image = data.image;
+      const src = data.image.startsWith('http') ? data.image : (WORKER_URL + data.image);
+      document.getElementById('blog-preview-image').innerHTML =
+        `<img src="${src}" loading="lazy" decoding="async" style="width:100%;border-radius:10px" alt="${title}" />`;
+      btnStatus.innerHTML = '<span style="color:#4ade80">✓ New image ready</span>';
+    }
+  } catch(e) {
+    btnStatus.textContent = 'Image generation failed: ' + e.message;
+  }
 }
 
 async function publishBlog() {
