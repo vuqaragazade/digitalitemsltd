@@ -1557,9 +1557,11 @@
     </div>
     <nav>
       <a href="/" onclick="navigate('home');return false" class="active" id="nav-home">Home</a>
-      <a href="/twitter-accounts" onclick="navigate('twitter');return false" id="nav-twitter">Twitter</a>
-      <a href="/reddit-accounts" onclick="navigate('reddit');return false" id="nav-reddit">Reddit</a>
-      <a href="/reddit-marketing" onclick="navigate('marketing');return false" id="nav-marketing">Marketing</a>
+      <span id="main-nav-links" style="display:contents">
+        <a href="/twitter-accounts" onclick="navigate('twitter');return false" id="nav-twitter">Twitter</a>
+        <a href="/reddit-accounts" onclick="navigate('reddit');return false" id="nav-reddit">Reddit</a>
+        <a href="/reddit-marketing" onclick="navigate('marketing');return false" id="nav-marketing">Marketing</a>
+      </span>
       <a href="/blog" onclick="navigate('blog');return false" id="nav-blog">Blog</a>
       <a href="/about" onclick="navigate('about');return false" id="nav-about">About</a>
     </nav>
@@ -1581,9 +1583,11 @@
 <div class="mobile-nav" id="mobile-nav">
   <a onclick="closeMobileMenu();openSearch()" style="cursor:pointer">🔍 Search</a>
   <a href="/" onclick="navigate('home');closeMobileMenu();return false">Home</a>
-  <a href="/twitter-accounts" onclick="navigate('twitter');closeMobileMenu();return false">Twitter Accounts</a>
-  <a href="/reddit-accounts" onclick="navigate('reddit');closeMobileMenu();return false">Reddit Accounts</a>
-  <a href="/reddit-marketing" onclick="navigate('marketing');closeMobileMenu();return false">Reddit Marketing</a>
+  <span id="mobile-nav-cats" style="display:contents">
+    <a href="/twitter-accounts" onclick="navigate('twitter');closeMobileMenu();return false">Twitter Accounts</a>
+    <a href="/reddit-accounts" onclick="navigate('reddit');closeMobileMenu();return false">Reddit Accounts</a>
+    <a href="/reddit-marketing" onclick="navigate('marketing');closeMobileMenu();return false">Reddit Marketing</a>
+  </span>
   <a href="/about" onclick="navigate('about');closeMobileMenu();return false">About</a>
   <a href="/contact" onclick="navigate('contact');closeMobileMenu();return false">Contact</a>
   <a href="/login" id="mobile-login-link" onclick="navigate('login');closeMobileMenu();return false">Login</a>
@@ -1749,6 +1753,20 @@
       </div>
     </div>
     <div class="product-table" id="marketing-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ UNIVERSAL DYNAMIC CATEGORY PAGE ═══════════════ -->
+<div class="page" id="page-category">
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title" id="cat-dyn-title"></div>
+        <div class="section-sub" id="cat-dyn-sub"></div>
+      </div>
+    </div>
+    <div class="product-table" id="category-list"></div>
+    <div id="cat-dyn-desc" style="margin-top:32px;color:var(--muted);line-height:1.7"></div>
   </div>
 </div>
 
@@ -2975,6 +2993,14 @@ function pageFromPath(path) {
   for (const [page, route] of Object.entries(PAGE_ROUTES)) {
     if (route === path) return page;
   }
+  // Dynamic (admin-created) category URLs
+  if (catalogsData) {
+    const cat = catalogsData.find(c => c.url === path);
+    if (cat) {
+      if (['twitter','reddit','marketing'].includes(cat.id)) return cat.id;
+      return { page: 'category', catId: cat.id };
+    }
+  }
   // Custom pages
   const slug = path.replace(/^\//, '');
   if (customPages && customPages[slug]) {
@@ -2990,6 +3016,8 @@ window.addEventListener('popstate', (e) => {
     else navigate('home', true);
   } else if (typeof result === 'object' && result.page === 'blogpost') {
     openBlogPost(result.slug, true);
+  } else if (typeof result === 'object' && result.page === 'category') {
+    openCategory(result.catId, true);
   } else if (typeof result === 'object' && result.page === 'custom') {
     navigate('home', true);
   } else {
@@ -6153,102 +6181,268 @@ const BUILTIN_PAGES = {
 };
 
 // ════════════════════════════════════════
-// CATALOGS — edit category page title/description/SEO
+// CATALOGS — fully dynamic category system
 // ════════════════════════════════════════
-const CATALOG_DEFAULTS = {
-  twitter: {
+// Seed defaults (used the first time, before anything is saved). These match the
+// original hard-coded categories so nothing breaks for existing products.
+const CATALOG_SEED = [
+  { id: 'twitter', name: 'Twitter', url: '/twitter-accounts',
     titleHtml: '<span>Twitter</span> Accounts',
     sub: 'Aged, verified Twitter accounts — choose by year or follower count',
     seoTitle: 'Buy Aged Twitter Accounts — DigitalItems.Store',
-    seoDesc: 'Buy high-quality aged and verified Twitter (X) accounts by year and follower count. Fast delivery, trusted seller.'
-  },
-  reddit: {
+    seoDesc: 'Buy high-quality aged and verified Twitter (X) accounts by year and follower count. Fast delivery, trusted seller.' },
+  { id: 'reddit', name: 'Reddit', url: '/reddit-accounts',
     titleHtml: '<span>Reddit</span> Accounts',
     sub: 'High-karma Reddit accounts, aged and verified',
     seoTitle: 'Buy Reddit Accounts with Karma — DigitalItems.Store',
-    seoDesc: 'Buy aged Reddit accounts with high karma. Verified, ready to use, fast delivery.'
-  },
-  marketing: {
+    seoDesc: 'Buy aged Reddit accounts with high karma. Verified, ready to use, fast delivery.' },
+  { id: 'marketing', name: 'Marketing', url: '/reddit-marketing',
     titleHtml: 'Reddit <span>Marketing</span>',
     sub: 'Guaranteed placement in Reddit Hot sections',
     seoTitle: 'Reddit Marketing Services — DigitalItems.Store',
-    seoDesc: 'Reddit marketing with guaranteed placement in Hot sections. Boost visibility and engagement.'
-  }
-};
+    seoDesc: 'Reddit marketing with guaranteed placement in Hot sections. Boost visibility and engagement.' }
+];
 
-let catalogsData = null;
+let catalogsData = null; // array of catalog objects
 
 async function loadCatalogs() {
   try {
     const res = await fetch(WORKER_URL + '/catalogs');
     const data = await res.json();
-    catalogsData = data.catalogs || {};
-  } catch(e) { catalogsData = {}; }
-  // Fill any missing catalog with defaults
-  ['twitter','reddit','marketing'].forEach(k => {
-    if (!catalogsData[k]) catalogsData[k] = { ...CATALOG_DEFAULTS[k] };
-  });
+    // Support both the old object format and the new array format
+    if (Array.isArray(data.catalogs)) catalogsData = data.catalogs;
+    else if (data.catalogs && typeof data.catalogs === 'object') {
+      // migrate old {twitter:{...}} object to array
+      catalogsData = CATALOG_SEED.map(seed => ({ ...seed, ...(data.catalogs[seed.id] || {}) }));
+    } else {
+      catalogsData = CATALOG_SEED.map(c => ({ ...c }));
+    }
+  } catch(e) {
+    catalogsData = CATALOG_SEED.map(c => ({ ...c }));
+  }
+  buildDynamicNav();
   applyCatalogsToPages();
+  populateProductCategoryDropdown();
 }
 
-// Apply saved catalog titles/subs to the actual category pages
+function getCatalogById(id) {
+  return (catalogsData || []).find(c => c.id === id) || null;
+}
+function getCatalogByUrl(url) {
+  return (catalogsData || []).find(c => c.url === url) || null;
+}
+
+// Build the header nav + mobile nav links from catalogs
+function buildDynamicNav() {
+  if (!catalogsData) return;
+  const navContainer = document.getElementById('main-nav-links');
+  if (navContainer) {
+    navContainer.innerHTML = catalogsData.map(c => {
+      const legacy = ['twitter','reddit','marketing'].includes(c.id);
+      const handler = legacy ? `navigate('${c.id}');return false` : `openCategory('${c.id}');return false`;
+      return `<a href="${c.url}" onclick="${handler}" id="nav-cat-${c.id}">${c.name}</a>`;
+    }).join('');
+  }
+  const mob = document.getElementById('mobile-nav-cats');
+  if (mob) {
+    mob.innerHTML = catalogsData.map(c => {
+      const legacy = ['twitter','reddit','marketing'].includes(c.id);
+      const handler = legacy ? `navigate('${c.id}');closeMobileMenu();return false` : `openCategory('${c.id}');closeMobileMenu();return false`;
+      return `<a href="${c.url}" onclick="${handler}">${c.name}</a>`;
+    }).join('');
+  }
+}
+
+// Apply catalog titles/subs to the legacy static pages (twitter/reddit/marketing)
 function applyCatalogsToPages() {
   if (!catalogsData) return;
-  ['twitter','reddit','marketing'].forEach(k => {
-    const c = catalogsData[k] || CATALOG_DEFAULTS[k];
-    const titleEl = document.getElementById('cat-'+k+'-title');
-    const subEl = document.getElementById('cat-'+k+'-sub');
-    if (titleEl) titleEl.innerHTML = c.titleHtml || CATALOG_DEFAULTS[k].titleHtml;
-    if (subEl) subEl.textContent = c.sub || CATALOG_DEFAULTS[k].sub;
+  ['twitter','reddit','marketing'].forEach(id => {
+    const c = getCatalogById(id);
+    if (!c) return;
+    const titleEl = document.getElementById('cat-'+id+'-title');
+    const subEl = document.getElementById('cat-'+id+'-sub');
+    if (titleEl) titleEl.innerHTML = c.titleHtml || '';
+    if (subEl) subEl.textContent = c.sub || '';
   });
 }
 
-// Get SEO for a category page (used by navigate)
+// Open any category by id — uses the universal page for non-legacy ones
+function openCategory(id, skipPush) {
+  const c = getCatalogById(id);
+  if (!c) { navigate('home'); return; }
+  // Legacy categories have their own static pages
+  if (id === 'twitter' || id === 'reddit' || id === 'marketing') {
+    navigate(id, skipPush);
+    return;
+  }
+  // Universal dynamic page
+  navigate('category', true);
+  if (!skipPush) history.pushState({page:'category', catId:id}, '', c.url);
+  document.getElementById('cat-dyn-title').innerHTML = c.titleHtml || c.name;
+  document.getElementById('cat-dyn-sub').textContent = c.sub || '';
+  document.getElementById('cat-dyn-desc').innerHTML = c.descHtml || '';
+  if (c.seoTitle) document.title = c.seoTitle;
+  const m = document.querySelector('meta[name="description"]');
+  if (m && c.seoDesc) m.setAttribute('content', c.seoDesc);
+  let canon = document.querySelector('link[rel="canonical"]');
+  if (canon) canon.setAttribute('href', 'https://digitalitems.store' + c.url);
+  renderProducts(id, 'category-list');
+}
+
+// SEO helper for legacy category pages
 function catalogSeo(key) {
-  const c = (catalogsData && catalogsData[key]) || CATALOG_DEFAULTS[key];
+  const c = getCatalogById(key);
   return c ? { title: c.seoTitle, desc: c.seoDesc } : null;
 }
 
+// ---- Admin: catalog management ----
+let editingCatalogId = null;
+
 function renderAdminCatalogs() {
   if (!catalogsData) { loadCatalogs().then(renderAdminCatalogs); return; }
-  const labels = { twitter: '🐦 Twitter Accounts', reddit: '🟠 Reddit Accounts', marketing: '📢 Reddit Marketing' };
   const box = document.getElementById('admin-catalogs-list');
-  box.innerHTML = ['twitter','reddit','marketing'].map(k => {
-    const c = catalogsData[k] || CATALOG_DEFAULTS[k];
+  const rows = catalogsData.map(c => {
+    const isLegacy = ['twitter','reddit','marketing'].includes(c.id);
+    const prodCount = (allProducts||[]).filter(p => p.category === c.id).length;
     return `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px">
-      <div style="font-weight:600;font-size:15px;margin-bottom:16px">${labels[k]}</div>
-      <div class="form-group">
-        <label>Page Title <span style="color:var(--muted);font-weight:400">(HTML ok — wrap part in &lt;span&gt; for orange highlight)</span></label>
-        <input type="text" id="cat-edit-${k}-title" value="${(c.titleHtml||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div style="min-width:0">
+        <div style="font-weight:600;font-size:14px">${c.name} <span style="font-size:12px;color:var(--muted);font-weight:400">${c.url}</span></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${prodCount} product${prodCount===1?'':'s'}${isLegacy?' · core category':''}</div>
       </div>
-      <div class="form-group">
-        <label>Description <span style="color:var(--muted);font-weight:400">(shown under the title)</span></label>
-        <input type="text" id="cat-edit-${k}-sub" value="${(c.sub||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="editCatalog('${c.id}')">✏️ Edit</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;color:#f87171" onclick="deleteCatalog('${c.id}')" ${isLegacy?'title="Core category — deleting is blocked to protect existing products"':''}>🗑</button>
       </div>
-      <div class="form-group">
-        <label>SEO Title <span style="color:var(--muted);font-weight:400">(browser tab + Google)</span></label>
-        <input type="text" id="cat-edit-${k}-seotitle" value="${(c.seoTitle||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
-      </div>
-      <div class="form-group">
-        <label>Meta Description <span style="color:var(--muted);font-weight:400">(Google snippet, ~150 chars)</span></label>
-        <textarea id="cat-edit-${k}-seodesc" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:vertical">${c.seoDesc||''}</textarea>
-      </div>
-      <button class="btn btn-primary" onclick="saveCatalog('${k}')" style="font-size:13px">Save ${labels[k].replace(/^..\s/,'')}</button>
-      <span id="cat-save-status-${k}" style="font-size:13px;color:var(--muted);margin-left:10px"></span>
     </div>`;
   }).join('');
+  box.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-primary" onclick="editCatalog(null)">+ Add Category</button>
+    </div>
+    ${rows}
+    <div id="catalog-editor"></div>
+  `;
 }
 
-async function saveCatalog(key) {
-  const status = document.getElementById('cat-save-status-'+key);
-  catalogsData[key] = {
-    titleHtml: document.getElementById('cat-edit-'+key+'-title').value.trim(),
-    sub: document.getElementById('cat-edit-'+key+'-sub').value.trim(),
-    seoTitle: document.getElementById('cat-edit-'+key+'-seotitle').value.trim(),
-    seoDesc: document.getElementById('cat-edit-'+key+'-seodesc').value.trim()
+function editCatalog(id) {
+  editingCatalogId = id;
+  const c = id ? getCatalogById(id) : { id:'', name:'', url:'', titleHtml:'', sub:'', descHtml:'', seoTitle:'', seoDesc:'' };
+  if (!c) return;
+  const isLegacy = ['twitter','reddit','marketing'].includes(id);
+  const isNew = !id;
+  const editor = document.getElementById('catalog-editor');
+  editor.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--accent1);border-radius:12px;padding:22px;margin-top:16px">
+      <div style="font-weight:600;font-size:15px;margin-bottom:18px">${isNew ? 'New Category' : 'Edit: ' + c.name}</div>
+
+      <div class="form-group">
+        <label>Category Name <span style="color:var(--muted);font-weight:400">(short, e.g. "Instagram")</span></label>
+        <input type="text" id="ce-name" value="${(c.name||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+
+      <div class="form-group">
+        <label>Category ID <span style="color:var(--muted);font-weight:400">(lowercase, no spaces — links products to this category)</span></label>
+        <input type="text" id="ce-id" value="${(c.id||'').replace(/"/g,'&quot;')}" ${isLegacy?'readonly title="Core category ID cannot change"':''} placeholder="e.g. instagram" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:${isLegacy?'var(--muted)':'var(--text)'};font-size:13px" />
+      </div>
+
+      <div class="form-group">
+        <label>URL <span style="color:var(--muted);font-weight:400">(must start with /, e.g. /instagram-accounts)</span></label>
+        <input type="text" id="ce-url" value="${(c.url||'').replace(/"/g,'&quot;')}" placeholder="/instagram-accounts" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+
+      <div class="form-group">
+        <label>Page Title <span style="color:var(--muted);font-weight:400">(HTML ok — wrap part in &lt;span&gt; for orange)</span></label>
+        <input type="text" id="ce-title" value="${(c.titleHtml||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+
+      <div class="form-group">
+        <label>Short Description <span style="color:var(--muted);font-weight:400">(under the title)</span></label>
+        <input type="text" id="ce-sub" value="${(c.sub||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+
+      <div class="form-group">
+        <label>SEO Title <span style="color:var(--muted);font-weight:400">(browser tab + Google)</span></label>
+        <input type="text" id="ce-seotitle" value="${(c.seoTitle||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+
+      <div class="form-group">
+        <label>Meta Description <span style="color:var(--muted);font-weight:400">(~150 chars)</span></label>
+        <textarea id="ce-seodesc" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:vertical">${c.seoDesc||''}</textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" onclick="saveCatalog()">Save</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('catalog-editor').innerHTML=''">Cancel</button>
+      </div>
+      <div id="ce-status" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
+    </div>
+  `;
+  editor.scrollIntoView({behavior:'smooth'});
+}
+
+async function saveCatalog() {
+  const status = document.getElementById('ce-status');
+  const name = document.getElementById('ce-name').value.trim();
+  let id = document.getElementById('ce-id').value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
+  let url = document.getElementById('ce-url').value.trim();
+  if (!name) { status.innerHTML = '<span style="color:#f87171">Name is required.</span>'; return; }
+  if (!id) { status.innerHTML = '<span style="color:#f87171">Category ID is required.</span>'; return; }
+  if (!url.startsWith('/')) url = '/' + url;
+
+  // Uniqueness checks (skip self when editing)
+  const clash = catalogsData.find(c => c.id !== editingCatalogId && (c.id === id || c.url === url));
+  if (clash) { status.innerHTML = '<span style="color:#f87171">Another category already uses that ID or URL.</span>'; return; }
+
+  const record = {
+    id, name, url,
+    titleHtml: document.getElementById('ce-title').value.trim() || (`<span>${name}</span>`),
+    sub: document.getElementById('ce-sub').value.trim(),
+    seoTitle: document.getElementById('ce-seotitle').value.trim(),
+    seoDesc: document.getElementById('ce-seodesc').value.trim(),
+    descHtml: (editingCatalogId ? (getCatalogById(editingCatalogId)||{}).descHtml : '') || ''
   };
+
+  if (editingCatalogId) {
+    const idx = catalogsData.findIndex(c => c.id === editingCatalogId);
+    // preserve descHtml from the old record
+    record.descHtml = catalogsData[idx].descHtml || record.descHtml;
+    catalogsData[idx] = record;
+  } else {
+    catalogsData.push(record);
+  }
+
   status.textContent = 'Saving…';
+  const ok = await persistCatalogs();
+  if (!ok) { status.innerHTML = '<span style="color:#f87171">Save failed.</span>'; return; }
+  buildDynamicNav();
+  applyCatalogsToPages();
+  populateProductCategoryDropdown();
+  renderAdminCatalogs();
+}
+
+async function deleteCatalog(id) {
+  const c = getCatalogById(id);
+  if (!c) return;
+  if (['twitter','reddit','marketing'].includes(id)) {
+    alert('This is a core category and cannot be deleted (it would break existing products).');
+    return;
+  }
+  const prodCount = (allProducts||[]).filter(p => p.category === id).length;
+  const warn = prodCount > 0
+    ? `Delete category "${c.name}"?\n\n⚠️ ${prodCount} product(s) are in this category. They will remain but won't show under any category page until reassigned.\n\nThis cannot be undone. Continue?`
+    : `Delete category "${c.name}"? This cannot be undone.`;
+  if (!confirm(warn)) return;
+  catalogsData = catalogsData.filter(x => x.id !== id);
+  const ok = await persistCatalogs();
+  if (!ok) { alert('Delete failed. Please try again.'); return; }
+  buildDynamicNav();
+  populateProductCategoryDropdown();
+  renderAdminCatalogs();
+  showToast('Category deleted');
+}
+
+async function persistCatalogs() {
   try {
     const res = await fetch(WORKER_URL + '/catalogs', {
       method: 'POST',
@@ -6256,13 +6450,17 @@ async function saveCatalog(key) {
       body: JSON.stringify({ catalogs: catalogsData })
     });
     const data = await res.json();
-    if (data.error) { status.innerHTML = '<span style="color:#f87171">'+data.error+'</span>'; return; }
-    applyCatalogsToPages();
-    status.innerHTML = '<span style="color:#4ade80">✓ Saved</span>';
-    setTimeout(()=>{ status.textContent=''; }, 2000);
-  } catch(e) {
-    status.innerHTML = '<span style="color:#f87171">Failed: '+e.message+'</span>';
-  }
+    return !data.error;
+  } catch(e) { return false; }
+}
+
+// Populate the product form's category dropdown from catalogs
+function populateProductCategoryDropdown() {
+  const sel = document.getElementById('prod-cat');
+  if (!sel || !catalogsData) return;
+  const cur = sel.value;
+  sel.innerHTML = catalogsData.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  if (cur) sel.value = cur;
 }
 
 async function renderAdminPages() {
@@ -6535,8 +6733,27 @@ handlePaymentRedirect();
   const result = pageFromPath(path);
   if (typeof result === 'object' && result.page === 'blogpost') {
     openBlogPost(result.slug, true);
+  } else if (typeof result === 'object' && result.page === 'category') {
+    openCategory(result.catId, true);
   } else if (typeof result === 'object' && result.page === 'custom') {
     navigate('home', true);
+  } else if (result === 'home' && path !== '/' && path !== '/index.html') {
+    // Path didn't match yet — catalogs/products may still be loading. Retry briefly.
+    let tries = 0;
+    const retry = () => {
+      const r = pageFromPath(path);
+      if (r !== 'home') {
+        if (typeof r === 'object' && r.page === 'category') openCategory(r.catId, true);
+        else if (typeof r === 'object' && r.page === 'blogpost') openBlogPost(r.slug, true);
+        else if (typeof r === 'object' && r.page === 'product') { if (r.productId) openProduct(r.productId, true); else navigate('home', true); }
+        else navigate(r, true);
+      } else if (tries++ < 40) {
+        setTimeout(retry, 50);
+      } else {
+        navigate('home', true);
+      }
+    };
+    retry();
   } else {
     navigate(result, true);
   }
