@@ -1773,7 +1773,7 @@
 <!-- ═══════════════ PRODUCT DETAIL PAGE ═══════════════ -->
 <div class="page" id="page-product">
   <div class="section" style="max-width:1000px">
-    <a href="/twitter-accounts" onclick="history.back();navigateBack();return false" style="color:var(--muted);font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin-bottom:24px">← Back to products</a>
+    <a href="/twitter-accounts" id="back-to-products-link" onclick="history.back();navigateBack();return false" style="color:var(--muted);font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin-bottom:24px">← Back to products</a>
     <div class="product-detail" id="product-detail-content"></div>
   </div>
 </div>
@@ -2725,9 +2725,11 @@
       </div>
       <div class="footer-col">
         <div class="footer-heading">Products</div>
-        <a href="/twitter-accounts" onclick="navigate('twitter');return false">Twitter Accounts</a>
-        <a href="/reddit-accounts" onclick="navigate('reddit');return false">Reddit Accounts</a>
-        <a href="/reddit-marketing" onclick="navigate('marketing');return false">Reddit Marketing</a>
+        <span id="footer-cat-links" style="display:contents">
+          <a href="/twitter-accounts" onclick="navigate('twitter');return false">Twitter Accounts</a>
+          <a href="/reddit-accounts" onclick="navigate('reddit');return false">Reddit Accounts</a>
+          <a href="/reddit-marketing" onclick="navigate('marketing');return false">Reddit Marketing</a>
+        </span>
       </div>
       <div class="footer-col">
         <div class="footer-heading">Company</div>
@@ -2926,8 +2928,14 @@ function navigate(page, skipPush) {
   window.scrollTo(0, 0);
 
   // Update URL + title (real pages via History API)
-  if (!skipPush && PAGE_ROUTES[page] && page !== 'product') {
-    history.pushState({page}, '', PAGE_ROUTES[page]);
+  // For category pages, prefer the (possibly edited) catalog URL over the static route.
+  let routeUrl = PAGE_ROUTES[page];
+  if ((page === 'twitter' || page === 'reddit' || page === 'marketing') && typeof getCatalogById === 'function') {
+    const cc = getCatalogById(page);
+    if (cc && cc.url) routeUrl = cc.url;
+  }
+  if (!skipPush && routeUrl && page !== 'product') {
+    history.pushState({page}, '', routeUrl);
   }
   if (PAGE_TITLES[page]) document.title = PAGE_TITLES[page];
   if (PAGE_DESC[page]) {
@@ -2947,7 +2955,7 @@ function navigate(page, skipPush) {
   }
   // Update canonical
   let canon = document.querySelector('link[rel="canonical"]');
-  if (canon && PAGE_ROUTES[page]) canon.setAttribute('href', 'https://digitalitems.store' + PAGE_ROUTES[page]);
+  if (canon && (routeUrl || PAGE_ROUTES[page])) canon.setAttribute('href', 'https://digitalitems.store' + (routeUrl || PAGE_ROUTES[page]));
 
   if (page === 'account' && !currentUser) { navigate('login'); return; }
   if (page === 'account') renderAccount();
@@ -6248,8 +6256,23 @@ function buildDynamicNav() {
     mob.innerHTML = catalogsData.map(c => {
       const legacy = ['twitter','reddit','marketing'].includes(c.id);
       const handler = legacy ? `navigate('${c.id}');closeMobileMenu();return false` : `openCategory('${c.id}');closeMobileMenu();return false`;
-      return `<a href="${c.url}" onclick="${handler}">${c.name}</a>`;
+      return `<a href="${c.url}" onclick="${handler}">${c.name} Accounts</a>`;
     }).join('');
+  }
+  // Footer category links
+  const footer = document.getElementById('footer-cat-links');
+  if (footer) {
+    footer.innerHTML = catalogsData.map(c => {
+      const legacy = ['twitter','reddit','marketing'].includes(c.id);
+      const handler = legacy ? `navigate('${c.id}');return false` : `openCategory('${c.id}');return false`;
+      const label = legacy ? c.name + ' Accounts' : c.name;
+      return `<a href="${c.url}" onclick="${handler}">${label}</a>`;
+    }).join('');
+  }
+  // "Back to products" link on the product page → first category
+  const backLink = document.getElementById('back-to-products-link');
+  if (backLink && catalogsData[0]) {
+    backLink.setAttribute('href', catalogsData[0].url);
   }
 }
 
