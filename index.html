@@ -1718,8 +1718,8 @@
   <div class="section">
     <div class="section-header">
       <div>
-        <div class="section-title"><span>Twitter</span> Accounts</div>
-        <div class="section-sub">Aged, verified Twitter accounts — choose by year or follower count</div>
+        <div class="section-title" id="cat-twitter-title"><span>Twitter</span> Accounts</div>
+        <div class="section-sub" id="cat-twitter-sub">Aged, verified Twitter accounts — choose by year or follower count</div>
       </div>
     </div>
     <div class="product-table" id="twitter-list"></div>
@@ -1731,8 +1731,8 @@
   <div class="section">
     <div class="section-header">
       <div>
-        <div class="section-title"><span>Reddit</span> Accounts</div>
-        <div class="section-sub">High-karma Reddit accounts, aged and verified</div>
+        <div class="section-title" id="cat-reddit-title"><span>Reddit</span> Accounts</div>
+        <div class="section-sub" id="cat-reddit-sub">High-karma Reddit accounts, aged and verified</div>
       </div>
     </div>
     <div class="product-table" id="reddit-list"></div>
@@ -1744,8 +1744,8 @@
   <div class="section">
     <div class="section-header">
       <div>
-        <div class="section-title">Reddit <span>Marketing</span></div>
-        <div class="section-sub">Guaranteed placement in Reddit Hot sections</div>
+        <div class="section-title" id="cat-marketing-title">Reddit <span>Marketing</span></div>
+        <div class="section-sub" id="cat-marketing-sub">Guaranteed placement in Reddit Hot sections</div>
       </div>
     </div>
     <div class="product-table" id="marketing-list"></div>
@@ -2108,6 +2108,7 @@
         <div class="admin-nav-item" onclick="adminTab('analytics',event)">📊 Analytics</div>
         <div class="admin-nav-item" onclick="adminTab('products',event)">🛍 Products</div>
         <div class="admin-nav-item" onclick="adminTab('pages',event)">📄 Pages</div>
+        <div class="admin-nav-item" onclick="adminTab('catalogs',event)">🗂 Catalogs</div>
         <div class="admin-nav-item" onclick="adminTab('blog',event)">✍️ Blog</div>
         <div class="admin-nav-item" onclick="adminTab('users',event)">👥 Users</div>
         <div class="admin-nav-item" onclick="adminTab('profile',event)">👤 Profile</div>
@@ -2248,7 +2249,14 @@
           </div>
         </div>
 
-        <!-- Users Tab -->
+        <!-- Catalogs Tab -->
+        <div id="admin-catalogs-tab" style="display:none">
+          <div class="admin-title" style="margin-bottom:8px">Catalogs</div>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:24px">Edit the title, description and SEO for the category pages (Twitter, Reddit, Marketing).</p>
+          <div id="admin-catalogs-list"></div>
+        </div>
+
+        <!-- Blog Tab -->
         <div id="admin-blog-tab" style="display:none">
           <div class="admin-title">Blog</div>
 
@@ -2907,6 +2915,17 @@ function navigate(page, skipPush) {
   if (PAGE_DESC[page]) {
     let m = document.querySelector('meta[name="description"]');
     if (m) m.setAttribute('content', PAGE_DESC[page]);
+  }
+  // Catalog pages: apply admin-edited SEO title/description if set
+  if (page === 'twitter' || page === 'reddit' || page === 'marketing') {
+    const seo = catalogSeo(page);
+    if (seo) {
+      if (seo.title) document.title = seo.title;
+      if (seo.desc) {
+        let m = document.querySelector('meta[name="description"]');
+        if (m) m.setAttribute('content', seo.desc);
+      }
+    }
   }
   // Update canonical
   let canon = document.querySelector('link[rel="canonical"]');
@@ -4393,7 +4412,7 @@ function adminLogout() {
 }
 
 function adminTab(tab, evt) {
-  ['orders','analytics','products','pages','blog','users','profile','settings'].forEach(t => {
+  ['orders','analytics','products','pages','catalogs','blog','users','profile','settings'].forEach(t => {
     const el = document.getElementById('admin-'+t+'-tab');
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
@@ -4404,6 +4423,7 @@ function adminTab(tab, evt) {
   if (tab === 'analytics') renderAnalytics();
   if (tab === 'products') { if (!adminOrders || adminOrders.length === 0) { renderAdminOrders(null).then(()=>renderAdminProducts()); } else { renderAdminProducts(); } }
   if (tab === 'pages') renderAdminPages();
+  if (tab === 'catalogs') renderAdminCatalogs();
   if (tab === 'blog') loadAdminBlogs();
   if (tab === 'users') renderAdminUsers();
   if (tab === 'profile') loadAdminProfile();
@@ -6132,6 +6152,119 @@ const BUILTIN_PAGES = {
   contact: { title: 'Contact Us', slug: 'contact' }
 };
 
+// ════════════════════════════════════════
+// CATALOGS — edit category page title/description/SEO
+// ════════════════════════════════════════
+const CATALOG_DEFAULTS = {
+  twitter: {
+    titleHtml: '<span>Twitter</span> Accounts',
+    sub: 'Aged, verified Twitter accounts — choose by year or follower count',
+    seoTitle: 'Buy Aged Twitter Accounts — DigitalItems.Store',
+    seoDesc: 'Buy high-quality aged and verified Twitter (X) accounts by year and follower count. Fast delivery, trusted seller.'
+  },
+  reddit: {
+    titleHtml: '<span>Reddit</span> Accounts',
+    sub: 'High-karma Reddit accounts, aged and verified',
+    seoTitle: 'Buy Reddit Accounts with Karma — DigitalItems.Store',
+    seoDesc: 'Buy aged Reddit accounts with high karma. Verified, ready to use, fast delivery.'
+  },
+  marketing: {
+    titleHtml: 'Reddit <span>Marketing</span>',
+    sub: 'Guaranteed placement in Reddit Hot sections',
+    seoTitle: 'Reddit Marketing Services — DigitalItems.Store',
+    seoDesc: 'Reddit marketing with guaranteed placement in Hot sections. Boost visibility and engagement.'
+  }
+};
+
+let catalogsData = null;
+
+async function loadCatalogs() {
+  try {
+    const res = await fetch(WORKER_URL + '/catalogs');
+    const data = await res.json();
+    catalogsData = data.catalogs || {};
+  } catch(e) { catalogsData = {}; }
+  // Fill any missing catalog with defaults
+  ['twitter','reddit','marketing'].forEach(k => {
+    if (!catalogsData[k]) catalogsData[k] = { ...CATALOG_DEFAULTS[k] };
+  });
+  applyCatalogsToPages();
+}
+
+// Apply saved catalog titles/subs to the actual category pages
+function applyCatalogsToPages() {
+  if (!catalogsData) return;
+  ['twitter','reddit','marketing'].forEach(k => {
+    const c = catalogsData[k] || CATALOG_DEFAULTS[k];
+    const titleEl = document.getElementById('cat-'+k+'-title');
+    const subEl = document.getElementById('cat-'+k+'-sub');
+    if (titleEl) titleEl.innerHTML = c.titleHtml || CATALOG_DEFAULTS[k].titleHtml;
+    if (subEl) subEl.textContent = c.sub || CATALOG_DEFAULTS[k].sub;
+  });
+}
+
+// Get SEO for a category page (used by navigate)
+function catalogSeo(key) {
+  const c = (catalogsData && catalogsData[key]) || CATALOG_DEFAULTS[key];
+  return c ? { title: c.seoTitle, desc: c.seoDesc } : null;
+}
+
+function renderAdminCatalogs() {
+  if (!catalogsData) { loadCatalogs().then(renderAdminCatalogs); return; }
+  const labels = { twitter: '🐦 Twitter Accounts', reddit: '🟠 Reddit Accounts', marketing: '📢 Reddit Marketing' };
+  const box = document.getElementById('admin-catalogs-list');
+  box.innerHTML = ['twitter','reddit','marketing'].map(k => {
+    const c = catalogsData[k] || CATALOG_DEFAULTS[k];
+    return `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px">
+      <div style="font-weight:600;font-size:15px;margin-bottom:16px">${labels[k]}</div>
+      <div class="form-group">
+        <label>Page Title <span style="color:var(--muted);font-weight:400">(HTML ok — wrap part in &lt;span&gt; for orange highlight)</span></label>
+        <input type="text" id="cat-edit-${k}-title" value="${(c.titleHtml||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+      <div class="form-group">
+        <label>Description <span style="color:var(--muted);font-weight:400">(shown under the title)</span></label>
+        <input type="text" id="cat-edit-${k}-sub" value="${(c.sub||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+      <div class="form-group">
+        <label>SEO Title <span style="color:var(--muted);font-weight:400">(browser tab + Google)</span></label>
+        <input type="text" id="cat-edit-${k}-seotitle" value="${(c.seoTitle||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+      <div class="form-group">
+        <label>Meta Description <span style="color:var(--muted);font-weight:400">(Google snippet, ~150 chars)</span></label>
+        <textarea id="cat-edit-${k}-seodesc" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:vertical">${c.seoDesc||''}</textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveCatalog('${k}')" style="font-size:13px">Save ${labels[k].replace(/^..\s/,'')}</button>
+      <span id="cat-save-status-${k}" style="font-size:13px;color:var(--muted);margin-left:10px"></span>
+    </div>`;
+  }).join('');
+}
+
+async function saveCatalog(key) {
+  const status = document.getElementById('cat-save-status-'+key);
+  catalogsData[key] = {
+    titleHtml: document.getElementById('cat-edit-'+key+'-title').value.trim(),
+    sub: document.getElementById('cat-edit-'+key+'-sub').value.trim(),
+    seoTitle: document.getElementById('cat-edit-'+key+'-seotitle').value.trim(),
+    seoDesc: document.getElementById('cat-edit-'+key+'-seodesc').value.trim()
+  };
+  status.textContent = 'Saving…';
+  try {
+    const res = await fetch(WORKER_URL + '/catalogs', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ catalogs: catalogsData })
+    });
+    const data = await res.json();
+    if (data.error) { status.innerHTML = '<span style="color:#f87171">'+data.error+'</span>'; return; }
+    applyCatalogsToPages();
+    status.innerHTML = '<span style="color:#4ade80">✓ Saved</span>';
+    setTimeout(()=>{ status.textContent=''; }, 2000);
+  } catch(e) {
+    status.innerHTML = '<span style="color:#f87171">Failed: '+e.message+'</span>';
+  }
+}
+
 async function renderAdminPages() {
   const el = document.getElementById('admin-pages-list');
   // Combine built-in and custom pages
@@ -6358,6 +6491,7 @@ function handlePaymentRedirect() {
 updateCartUI();
 updateAuthUI();
 loadProductsFromServer();
+loadCatalogs();
 loadSoldCounts();
 initSalesNotifications();
 loadPagesFromServer();
