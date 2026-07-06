@@ -3421,6 +3421,16 @@ function fireGoogleAdsConversion(data) {
     const label = (window._trackingCache && window._trackingCache.gadsLabel) || '';
     if (!adsId) return;
     const sendTo = label ? (adsId + '/' + label) : adsId;
+
+    // Enhanced Conversions: provide the customer email so gtag can hash it (SHA-256)
+    // client-side and match the conversion more accurately. Only when the user hasn't
+    // declined tracking consent. gtag hashes it automatically — the raw email never
+    // leaves the browser unhashed.
+    const consentDeclined = localStorage.getItem('di_cookie_consent') === 'declined';
+    if (!consentDeclined && data.email) {
+      gtag('set', 'user_data', { email: (data.email || '').trim().toLowerCase() });
+    }
+
     gtag('event', 'conversion', {
       send_to: sendTo,
       value: data.value || 0,
@@ -4053,7 +4063,8 @@ async function processCryptoPayment() {
   });
   window._pendingPurchase = {
     transaction_id: orderId, currency: 'USD', value: total,
-    items: cart.map(c => productToItem(c, c.qty))
+    items: cart.map(c => productToItem(c, c.qty)),
+    email: (document.getElementById('co-email') || {}).value || ''
   };
 
   if (currentUser) {
@@ -4125,7 +4136,8 @@ async function processPayment() {
   // Stash purchase data so we can fire 'purchase' when payment confirms
   window._pendingPurchase = {
     transaction_id: orderId, currency: 'USD', value: total,
-    items: cart.map(c => productToItem(c, c.qty))
+    items: cart.map(c => productToItem(c, c.qty)),
+    email: (document.getElementById('co-email') || {}).value || ''
   };
 
   // Save order locally first
@@ -5897,7 +5909,7 @@ async function injectTracking() {
       window.dataLayer = window.dataLayer || [];
       gtag('js', new Date());
       if (t.ga4) gtag('config', t.ga4);
-      if (t.gads) gtag('config', t.gads);
+      if (t.gads) gtag('config', t.gads, { 'allow_enhanced_conversions': true });
     }
 
     // Google Tag Manager
