@@ -4017,12 +4017,19 @@ function showPaymentResult(status, orderId) {
   const layout = document.querySelector('#page-checkout .checkout-layout');
   if (!layout) return;
   if (status === 'success') {
-    // Fire GA4/Google Ads purchase conversion event
-    const purchaseData = (window._pendingPurchase && window._pendingPurchase.transaction_id === orderId)
-      ? window._pendingPurchase
-      : { transaction_id: orderId, currency: 'USD' };
-    trackEvent('purchase', purchaseData);
-    fireGoogleAdsConversion(purchaseData);
+    // Fire GA4/Google Ads purchase conversion ONLY ONCE per order — ever.
+    // Without this guard, re-polling, page refreshes, or clicking "check now"
+    // multiple times would re-fire the purchase event and inflate revenue in
+    // GA4/Google Ads (GA4 does not dedupe repeated purchase events by transaction_id).
+    const convKey = 'di_conv_fired_' + orderId;
+    if (!localStorage.getItem(convKey)) {
+      localStorage.setItem(convKey, '1');
+      const purchaseData = (window._pendingPurchase && window._pendingPurchase.transaction_id === orderId)
+        ? window._pendingPurchase
+        : { transaction_id: orderId, currency: 'USD' };
+      trackEvent('purchase', purchaseData);
+      fireGoogleAdsConversion(purchaseData);
+    }
     window._pendingPurchase = null;
     window._checkoutTracked = false;
     // Payment confirmed — now clear the cart
