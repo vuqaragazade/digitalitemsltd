@@ -136,7 +136,11 @@ export default {
             const prodRes = await fetch(BACKEND + '/products');
             const data = await prodRes.json();
             const products = (data && data.products) || [];
-            product = products.find(p => p.slug === slug) || null;
+            // Match by stored slug first; fall back to a computed slug from the name
+            // in case older backend data predates the slug field.
+            const computeSlug = (s) => (s || '').toLowerCase().trim()
+              .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+            product = products.find(p => p.slug === slug) || products.find(p => computeSlug(p.name) === slug) || null;
           } catch (e) { product = null; }
 
           if (product) {

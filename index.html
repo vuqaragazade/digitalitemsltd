@@ -6816,6 +6816,9 @@ async function loadProductsFromServer() {
     const data = await res.json();
     if (data.products && data.products.length) {
       allProducts = data.products;
+      // Server data may predate the slug field (older sync) — backfill any missing slugs
+      // so product URLs, SSR, and admin tools always have a valid slug to match against.
+      allProducts.forEach(p => { if (!p.slug) p.slug = slugifyInit(p.name); });
       localStorage.setItem('di_products', JSON.stringify(allProducts));
       renderFeatured();
     }
