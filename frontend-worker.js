@@ -64,8 +64,14 @@ export default {
             if (blog.metaDescription || blog.excerpt) inject += `<meta property="og:description" content="${esc(blog.metaDescription || blog.excerpt)}" />`;
             if (img) inject += `<meta property="og:image" content="${esc(img)}" />`;
             inject += `<meta property="og:type" content="article" />`;
-            if (blog.metaTitle || blog.title) inject += `<title>${esc(blog.metaTitle || blog.title)}</title>`;
             html = html.replace('<head>', '<head>' + inject);
+            // Replace the static <title> instead of adding a duplicate one
+            if (blog.metaTitle || blog.title) {
+              html = html.replace(
+                /<title>[^<]*<\/title>/,
+                `<title>${esc(blog.metaTitle || blog.title)}</title>`
+              );
+            }
             // Replace the static canonical with the blog-specific one (avoid duplicates)
             html = html.replace(
               '<link rel="canonical" href="https://digitalitems.store/" />',
@@ -112,6 +118,66 @@ export default {
           return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
         } catch (e) {
           // Fall back to normal static serving
+          return env.ASSETS.fetch(request);
+        }
+      }
+    }
+
+    // Product pages: inject SEO meta (title/description/keywords/canonical/OG) server-side
+    if (url.pathname.startsWith('/products/')) {
+      const slug = url.pathname.replace('/products/', '').replace(/\/$/, '');
+      if (slug) {
+        try {
+          const assetRes = await env.ASSETS.fetch(new Request('https://assets.local/index.html'));
+          let html = await assetRes.text();
+
+          let product = null;
+          try {
+            const prodRes = await fetch(BACKEND + '/products');
+            const data = await prodRes.json();
+            const products = (data && data.products) || [];
+            product = products.find(p => p.slug === slug) || null;
+          } catch (e) { product = null; }
+
+          if (product) {
+            const esc = (s) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            const title = product.metaTitle || ('Buy ' + product.name + ' – DigitalItems.Store');
+            const desc = product.metaDesc || product.desc || ('Buy ' + product.name + ' at DigitalItems.Store');
+            const img = product.image
+              ? (product.image.startsWith('http') ? product.image : BACKEND + product.image)
+              : '';
+
+            let inject = `<meta property="og:title" content="${esc(title)}" />`;
+            inject += `<meta property="og:description" content="${esc(desc)}" />`;
+            inject += `<meta property="og:type" content="product" />`;
+            if (img) inject += `<meta property="og:image" content="${esc(img)}" />`;
+            html = html.replace('<head>', '<head>' + inject);
+            // Replace the static <title> instead of adding a duplicate one
+            html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`);
+
+            // Replace the static description/keywords meta with product-specific ones
+            html = html.replace(
+              /<meta name="description" content="[^"]*" \/>/,
+              `<meta name="description" content="${esc(desc)}" />`
+            );
+            if (product.metaKeywords) {
+              html = html.replace(
+                /<meta name="keywords" content="[^"]*" \/>/,
+                `<meta name="keywords" content="${esc(product.metaKeywords)}" />`
+              );
+            }
+            // Replace the static canonical with the product-specific one
+            html = html.replace(
+              '<link rel="canonical" href="https://digitalitems.store/" />',
+              `<link rel="canonical" href="https://digitalitems.store/products/${esc(slug)}" />`
+            );
+
+            return new Response(html, {
+              headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' }
+            });
+          }
+          return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+        } catch (e) {
           return env.ASSETS.fetch(request);
         }
       }
