@@ -2241,10 +2241,14 @@
         </div>
 
         <div id="admin-products-tab" style="display:none">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
             <div class="admin-title" style="margin:0">Products</div>
-            <button class="btn btn-primary" onclick="openAddProduct()">+ Add Product</button>
+            <div style="display:flex;gap:10px">
+              <button class="btn btn-ghost" onclick="syncProductSeoDefaults()" id="seo-sync-btn">🔄 Apply Latest SEO to All Products</button>
+              <button class="btn btn-primary" onclick="openAddProduct()">+ Add Product</button>
+            </div>
           </div>
+          <div id="seo-sync-status" style="font-size:13px;color:var(--muted);margin-bottom:14px"></div>
           <div class="admin-table">
             <div class="admin-table-head" style="grid-template-columns:1fr 100px 80px 55px 60px 80px">
               <span>Name</span><span>Category</span><span>Price</span><span>Stock</span><span>Sold</span><span>Actions</span>
@@ -4908,6 +4912,39 @@ async function renderAnalytics() {
         <span style="font-size:13px"><span style="color:var(--muted)">${d.qty} sold</span> · <span style="color:var(--accent1);font-weight:600">$${d.revenue.toFixed(2)}</span></span>
       </div>
     `).join('');
+  }
+}
+
+// Merge the latest built-in SEO (metaTitle/metaDesc/metaKeywords) from the PRODUCTS
+// defaults into whatever is currently live (server/localStorage), WITHOUT touching
+// price, stock, images, or any other field the admin may have edited live.
+// Only fills SEO fields that are empty, or all of them if the "overwrite" flag is on.
+async function syncProductSeoDefaults() {
+  const status = document.getElementById('seo-sync-status');
+  const overwrite = confirm(
+    'Apply the latest built-in SEO text (title/description/keywords) to all products?\n\n' +
+    'Click OK to REPLACE existing SEO text on every product with the latest version.\n' +
+    'Click Cancel to only FILL IN missing SEO text (keeps any custom SEO you already wrote).'
+  );
+  let updated = 0;
+  allProducts.forEach(p => {
+    const def = PRODUCTS.find(d => d.id === p.id);
+    if (!def) return; // custom/admin-added product with no built-in default — skip
+    if (overwrite || !p.metaTitle) { if (def.metaTitle) { p.metaTitle = def.metaTitle; updated++; } }
+    if (overwrite || !p.metaDesc) { if (def.metaDesc) p.metaDesc = def.metaDesc; }
+    if (overwrite || !p.metaKeywords) { if (def.metaKeywords) p.metaKeywords = def.metaKeywords; }
+  });
+  localStorage.setItem('di_products', JSON.stringify(allProducts));
+  status.textContent = 'Syncing to server…';
+  try {
+    await fetch(WORKER_URL + '/products', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ products: allProducts })
+    });
+    status.innerHTML = `<span style="color:#4ade80">✓ SEO applied to ${updated} products and synced to the live site.</span>`;
+  } catch(e) {
+    status.innerHTML = `<span style="color:#f87171">Synced locally, but failed to push to server: ${e.message}</span>`;
   }
 }
 
