@@ -2598,6 +2598,17 @@
       <div id="prod-image-preview" style="margin-top:8px"></div>
     </div>
     <div class="form-group">
+      <label>Delivery File <span style="color:var(--muted);font-weight:400">(optional — auto-emailed to customer when payment completes)</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="file" id="prod-file-input" aria-label="Upload delivery file" style="font-size:13px;color:var(--muted);flex:1" />
+        <button class="btn btn-ghost" onclick="uploadProductFile()" style="padding:6px 14px;font-size:13px;white-space:nowrap">Upload</button>
+      </div>
+      <div id="prod-file-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+      <p style="font-size:11px;color:var(--muted);margin-top:4px">Max 20MB. When a customer's payment for this product completes, this file is automatically attached and emailed to them.</p>
+      <input type="hidden" id="prod-delivery-key" />
+      <input type="hidden" id="prod-delivery-filename" />
+    </div>
+    <div class="form-group">
       <label>Page URL (slug)</label>
       <div style="display:flex;align-items:center;gap:4px">
         <span style="color:var(--muted);font-size:13px">/products/</span>
@@ -4999,7 +5010,7 @@ function renderAdminProducts() {
     const soldCount = sold[p.id] || 0;
     return `
     <div class="admin-table-row" style="grid-template-columns:1fr 100px 80px 55px 60px 80px">
-      <span>${p.name}</span>
+      <span>${p.name}${p.deliveryFile?' <span title="Delivery file attached" style="font-size:11px">📎</span>':''}</span>
       <span style="color:var(--muted)">${p.category}</span>
       <span style="color:var(--accent1);font-weight:600">$${p.price.toFixed(2)}</span>
       <span style="text-align:center">${stockLabel}</span>
@@ -5703,6 +5714,7 @@ function openAddProduct() {
   document.getElementById('prod-metatitle').value = '';
   document.getElementById('prod-metadesc').value = '';
   document.getElementById('prod-metakeywords').value = '';
+  removeProductFile();
   document.getElementById('product-modal').classList.add('open');
 }
 
@@ -5728,6 +5740,13 @@ function editProduct(id) {
   document.getElementById('prod-metatitle').value = p.metaTitle || '';
   document.getElementById('prod-metadesc').value = p.metaDesc || '';
   document.getElementById('prod-metakeywords').value = p.metaKeywords || '';
+  document.getElementById('prod-delivery-key').value = p.deliveryFile || '';
+  document.getElementById('prod-delivery-filename').value = p.deliveryFileName || '';
+  document.getElementById('prod-file-input').value = '';
+  const fileStatus = document.getElementById('prod-file-status');
+  fileStatus.innerHTML = p.deliveryFile
+    ? `<span style="color:#4ade80">✓ Attached: ${p.deliveryFileName || 'file'}</span> <span onclick="removeProductFile()" style="cursor:pointer;color:#f87171;margin-left:8px">Remove</span>`
+    : '';
   document.getElementById('product-modal').classList.add('open');
 }
 
@@ -5759,6 +5778,40 @@ async function uploadProductImage() {
   }
 }
 
+async function uploadProductFile() {
+  const fileInput = document.getElementById('prod-file-input');
+  const status = document.getElementById('prod-file-status');
+  const file = fileInput.files[0];
+  if (!file) { showToast('Choose a file first'); return; }
+  if (file.size > 20*1024*1024) { showToast('File too large (max 20MB)'); return; }
+  status.textContent = '⏳ Uploading...';
+  try {
+    const res = await fetch(WORKER_URL + '/upload-file', {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream',
+        'X-Admin-Password': adminPassword,
+        'X-File-Name': encodeURIComponent(file.name)
+      },
+      body: file
+    });
+    const data = await res.json();
+    if (data.error) { status.innerHTML = '<span style="color:#f87171">'+data.error+'</span>'; return; }
+    document.getElementById('prod-delivery-key').value = data.key;
+    document.getElementById('prod-delivery-filename').value = data.filename;
+    status.innerHTML = `<span style="color:#4ade80">✓ Uploaded: ${data.filename}</span> <span onclick="removeProductFile()" style="cursor:pointer;color:#f87171;margin-left:8px">Remove</span>`;
+  } catch(e) {
+    status.innerHTML = '<span style="color:#f87171">Upload failed</span>';
+  }
+}
+
+function removeProductFile() {
+  document.getElementById('prod-delivery-key').value = '';
+  document.getElementById('prod-delivery-filename').value = '';
+  document.getElementById('prod-file-input').value = '';
+  document.getElementById('prod-file-status').textContent = '';
+}
+
 async function saveProduct() {
   const name = document.getElementById('prod-name').value.trim();
   const price = parseFloat(document.getElementById('prod-price').value);
@@ -5770,6 +5823,8 @@ async function saveProduct() {
   const metaTitle = document.getElementById('prod-metatitle').value.trim();
   const metaDesc = document.getElementById('prod-metadesc').value.trim();
   const metaKeywords = document.getElementById('prod-metakeywords').value.trim();
+  const deliveryFile = document.getElementById('prod-delivery-key').value.trim();
+  const deliveryFileName = document.getElementById('prod-delivery-filename').value.trim();
   let slug = document.getElementById('prod-slug').value.trim();
   if (!slug) slug = slugify(name);
   else slug = slugify(slug);
@@ -5786,9 +5841,9 @@ async function saveProduct() {
   }
   if (editingProductId) {
     const idx = allProducts.findIndex(p => p.id === editingProductId);
-    if (idx > -1) allProducts[idx] = {...allProducts[idx], name, price, desc, category, fullDesc, image, metaTitle, metaDesc, metaKeywords, slug, stock};
+    if (idx > -1) allProducts[idx] = {...allProducts[idx], name, price, desc, category, fullDesc, image, metaTitle, metaDesc, metaKeywords, slug, stock, deliveryFile, deliveryFileName};
   } else {
-    allProducts.push({id:'p'+Date.now(), name, price, desc, category, fullDesc, image, metaTitle, metaDesc, metaKeywords, slug, stock});
+    allProducts.push({id:'p'+Date.now(), name, price, desc, category, fullDesc, image, metaTitle, metaDesc, metaKeywords, slug, stock, deliveryFile, deliveryFileName});
   }
   // Apply image to all products in the same category if checkbox is checked
   if (applyAll && image) {
