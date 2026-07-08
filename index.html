@@ -2610,6 +2610,10 @@
         <label>Meta Description</label>
         <input aria-label="Buy aged 2010 Twitter account..." type="text" id="prod-metadesc" placeholder="Buy aged 2010 Twitter account..." />
       </div>
+      <div class="form-group">
+        <label>Meta Keywords <span style="color:var(--muted);font-weight:400">(comma-separated)</span></label>
+        <input aria-label="buy twitter accounts, aged twitter accounts" type="text" id="prod-metakeywords" placeholder="buy twitter accounts 2010, aged twitter accounts" />
+      </div>
     </div>
     <div style="display:flex;gap:12px;margin-top:8px">
       <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
@@ -2643,6 +2647,10 @@
       <div class="form-group">
         <label>Meta Description</label>
         <input aria-label="Learn about DigitalItems LTD..." type="text" id="page-metadesc" placeholder="Learn about DigitalItems LTD..." />
+      </div>
+      <div class="form-group">
+        <label>Meta Keywords <span style="color:var(--muted);font-weight:400">(comma-separated)</span></label>
+        <input aria-label="digitalitems, about digitalitems" type="text" id="page-metakeywords" placeholder="digitalitems store, about us" />
       </div>
     </div>
     <div style="display:flex;gap:12px;margin-top:8px">
@@ -2792,51 +2800,51 @@ const CATEGORY_DESC = {
 
 const PRODUCTS = [
   // TWITTER
-  {id:'t1',name:'New Twitter accounts',category:'twitter',price:0.80,desc:'Created: 6 days+'},
-  {id:'t2',name:'2024 aged Twitter accounts',category:'twitter',price:3.00,desc:'Created: 2024'},
-  {id:'t3',name:'2022 aged Twitter accounts',category:'twitter',price:4.00,desc:'Created: 2022'},
-  {id:'t4',name:'Twitter accounts 2020 aged',category:'twitter',price:5.00,desc:'Created: 2020'},
-  {id:'t5',name:'Twitter accounts 2019 aged',category:'twitter',price:6.00,desc:'Created: 2019'},
-  {id:'t6',name:'Twitter accounts 2016 aged',category:'twitter',price:7.00,desc:'Created: 2016'},
-  {id:'t7',name:'Twitter accounts 2017 aged',category:'twitter',price:7.00,desc:'Created: 2017'},
-  {id:'t8',name:'Twitter accounts 2013 aged',category:'twitter',price:8.00,desc:'Created: 2013'},
-  {id:'t9',name:'Twitter accounts 2014 aged',category:'twitter',price:8.00,desc:'Created: 2014'},
-  {id:'t10',name:'Twitter accounts 2015 aged',category:'twitter',price:8.00,desc:'Created: 2015'},
-  {id:'t11',name:'Twitter accounts 2012 aged',category:'twitter',price:9.00,desc:'Created: 2012'},
-  {id:'t12',name:'Twitter accounts 2011 aged',category:'twitter',price:9.00,desc:'Created: 2011'},
-  {id:'t13',name:'Twitter accounts 2010 aged',category:'twitter',price:10.00,desc:'Created: 2010'},
-  {id:'t14',name:'Twitter accounts 2009 aged',category:'twitter',price:11.00,desc:'Created: 2009'},
-  {id:'t15',name:'Twitter accounts with 100+ followers',category:'twitter',price:13.00,desc:'Followers: 100+ · Created: 2010–2023'},
-  {id:'t16',name:'2018 aged Twitter accounts',category:'twitter',price:6.00,desc:'Created: 2018'},
-  {id:'t17',name:'2021 aged Twitter accounts',category:'twitter',price:5.00,desc:'Created: 2021'},
-  {id:'t18',name:'2008 aged Twitter accounts',category:'twitter',price:27.00,desc:'Created: 2008'},
-  {id:'t19',name:'Twitter accounts with 500+ followers',category:'twitter',price:20.00,desc:'Followers: 500+ · Created: 2010–2023'},
-  {id:'t20',name:'Twitter accounts with 1000+ followers',category:'twitter',price:35.00,desc:'Followers: 1000+ · Created: 2010–2025'},
-  {id:'t21',name:'Twitter accounts with 5000+ followers',category:'twitter',price:110.00,desc:'Followers: 5000+ · Created: 2010–2024'},
-  {id:'t22',name:'2007 Aged Twitter Accounts',category:'twitter',price:50.00,desc:'Created: 2007'},
-  {id:'t23',name:'10 twitter accounts aged',category:'twitter',price:50.00,desc:'Created: 2010–2023 (mix)'},
-  {id:'t24',name:'50 twitter accounts mix aged',category:'twitter',price:150.00,desc:'Created: 2010–2021 (mix)'},
-  {id:'t25',name:'100 twitter accounts aged',category:'twitter',price:250.00,desc:'Created: 2010–2023'},
-  {id:'t26',name:'150 twitter accounts aged - 2023',category:'twitter',price:225.00,desc:'Created: 2023'},
-  {id:'t27',name:'150 twitter accounts aged - 2024',category:'twitter',price:150.00,desc:'Created: 2024'},
-  {id:'t28',name:'1000 twitter accounts aged (mix)',category:'twitter',price:950.00,desc:'Created: 2010–2023 (mix)'},
-  {id:'t29',name:'100 TikTok accounts with 1k followers (2023-2024)',category:'twitter',price:700.00,desc:'Created: 2023–2024 · Followers: 1000+'},
+  {id:'t1',name:'New Twitter accounts',category:'twitter',price:0.80,desc:'Created: 6 days+',metaTitle:'Buy New Twitter Accounts (Fresh, 6+ Days Old) | DigitalItems',metaDesc:'Buy brand new Twitter (X) accounts, created 6+ days ago. Instant delivery, low-cost starter accounts perfect for bulk campaigns. Secure checkout.',metaKeywords:'buy new twitter accounts, fresh twitter accounts, cheap twitter accounts'},
+  {id:'t2',name:'2024 aged Twitter accounts',category:'twitter',price:3.00,desc:'Created: 2024',metaTitle:'Buy 2024 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Purchase aged Twitter (X) accounts created in 2024. Affordable, verified, and ready to use immediately. Fast delivery, secure payment.',metaKeywords:'2024 aged twitter accounts, buy 2024 twitter account, twitter accounts for sale 2024'},
+  {id:'t3',name:'2022 aged Twitter accounts',category:'twitter',price:4.00,desc:'Created: 2022',metaTitle:'Buy 2022 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Shop aged Twitter (X) accounts registered in 2022. Add instant account history to your campaigns. Verified sellers, fast delivery.',metaKeywords:'2022 aged twitter accounts, buy 2022 twitter account'},
+  {id:'t4',name:'Twitter accounts 2020 aged',category:'twitter',price:5.00,desc:'Created: 2020',metaTitle:'Buy 2020 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Get aged Twitter (X) accounts created in 2020. Trusted account age for marketing, automation, or resale. Instant delivery after payment.',metaKeywords:'2020 aged twitter accounts, buy 2020 twitter account, old twitter accounts 2020'},
+  {id:'t5',name:'Twitter accounts 2019 aged',category:'twitter',price:6.00,desc:'Created: 2019',metaTitle:'Buy 2019 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Buy verified Twitter (X) accounts created in 2019. Ideal aged accounts for marketing and outreach. Secure checkout, fast delivery.',metaKeywords:'2019 aged twitter accounts, buy 2019 twitter account'},
+  {id:'t6',name:'Twitter accounts 2016 aged',category:'twitter',price:7.00,desc:'Created: 2016',metaTitle:'Buy 2016 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Shop aged Twitter (X) accounts from 2016. Older account age adds credibility to your marketing or outreach campaigns. Fast delivery.',metaKeywords:'2016 aged twitter accounts, buy 2016 twitter account'},
+  {id:'t7',name:'Twitter accounts 2017 aged',category:'twitter',price:7.00,desc:'Created: 2017',metaTitle:'Buy 2017 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Get Twitter (X) accounts registered in 2017. Trusted age and history for serious marketers. Instant delivery, secure payment.',metaKeywords:'2017 aged twitter accounts, buy 2017 twitter account'},
+  {id:'t8',name:'Twitter accounts 2013 aged',category:'twitter',price:8.00,desc:'Created: 2013',metaTitle:'Buy 2013 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Shop rare aged Twitter (X) accounts from 2013. Decade-old account history for premium marketing needs. Fast, secure delivery.',metaKeywords:'2013 aged twitter accounts, buy 2013 twitter account, old twitter accounts'},
+  {id:'t9',name:'Twitter accounts 2014 aged',category:'twitter',price:8.00,desc:'Created: 2014',metaTitle:'Buy 2014 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Purchase Twitter (X) accounts created in 2014. Long-standing account age for extra credibility. Secure checkout, instant delivery.',metaKeywords:'2014 aged twitter accounts, buy 2014 twitter account'},
+  {id:'t10',name:'Twitter accounts 2015 aged',category:'twitter',price:8.00,desc:'Created: 2015',metaTitle:'Buy 2015 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Buy aged Twitter (X) accounts from 2015. Nearly a decade of account age, ideal for trusted marketing profiles. Fast delivery.',metaKeywords:'2015 aged twitter accounts, buy 2015 twitter account'},
+  {id:'t11',name:'Twitter accounts 2012 aged',category:'twitter',price:9.00,desc:'Created: 2012',metaTitle:'Buy 2012 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Get rare aged Twitter (X) accounts created in 2012. Over a decade of history for premium campaigns. Secure and fast delivery.',metaKeywords:'2012 aged twitter accounts, buy 2012 twitter account'},
+  {id:'t12',name:'Twitter accounts 2011 aged',category:'twitter',price:9.00,desc:'Created: 2011',metaTitle:'Buy 2011 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Shop Twitter (X) accounts registered in 2011. Extremely aged accounts with long-standing history. Instant, secure delivery.',metaKeywords:'2011 aged twitter accounts, buy 2011 twitter account'},
+  {id:'t13',name:'Twitter accounts 2010 aged',category:'twitter',price:10.00,desc:'Created: 2010',metaTitle:'Buy 2010 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Buy Twitter (X) accounts created in 2010. Fifteen-year account age for the most credible marketing profiles. Fast delivery.',metaKeywords:'2010 aged twitter accounts, buy 2010 twitter account'},
+  {id:'t14',name:'Twitter accounts 2009 aged',category:'twitter',price:11.00,desc:'Created: 2009',metaTitle:'Buy 2009 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Purchase ultra-rare Twitter (X) accounts from 2009. Among the oldest accounts available, perfect for premium use. Secure delivery.',metaKeywords:'2009 aged twitter accounts, buy 2009 twitter account, rare old twitter accounts'},
+  {id:'t15',name:'Twitter accounts with 100+ followers',category:'twitter',price:13.00,desc:'Followers: 100+ · Created: 2010–2023',metaTitle:'Buy Twitter Accounts with 100+ Followers | DigitalItems',metaDesc:'Buy Twitter (X) accounts with 100+ real followers, created 2010–2023. Instant social proof for your brand or resale. Fast delivery.',metaKeywords:'buy twitter accounts with followers, twitter accounts 100 followers'},
+  {id:'t16',name:'2018 aged Twitter accounts',category:'twitter',price:6.00,desc:'Created: 2018',metaTitle:'Buy 2018 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Purchase Twitter (X) accounts created in 2018. Well-aged accounts with genuine history, perfect for professional use. Fast delivery.',metaKeywords:'2018 aged twitter accounts, buy 2018 twitter account'},
+  {id:'t17',name:'2021 aged Twitter accounts',category:'twitter',price:5.00,desc:'Created: 2021',metaTitle:'Buy 2021 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Buy Twitter (X) accounts created in 2021. Reliable aged accounts ready for immediate use. Fast delivery, secure checkout.',metaKeywords:'2021 aged twitter accounts, buy 2021 twitter account'},
+  {id:'t18',name:'2008 aged Twitter accounts',category:'twitter',price:27.00,desc:'Created: 2008',metaTitle:'Buy 2008 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Own an extremely rare Twitter (X) account created in 2008. One of the oldest account vintages on the market. Limited stock, fast delivery.',metaKeywords:'2008 aged twitter accounts, buy 2008 twitter account, rare vintage twitter accounts'},
+  {id:'t19',name:'Twitter accounts with 500+ followers',category:'twitter',price:20.00,desc:'Followers: 500+ · Created: 2010–2023',metaTitle:'Buy Twitter Accounts with 500+ Followers | DigitalItems',metaDesc:'Shop Twitter (X) accounts with 500+ followers, aged 2010–2023. Strong starting audience for marketing or influencer use. Secure checkout.',metaKeywords:'buy twitter accounts with 500 followers, twitter accounts with followers for sale'},
+  {id:'t20',name:'Twitter accounts with 1000+ followers',category:'twitter',price:35.00,desc:'Followers: 1000+ · Created: 2010–2025',metaTitle:'Buy Twitter Accounts with 1000+ Followers | DigitalItems',metaDesc:'Purchase Twitter (X) accounts with 1000+ followers, aged 2010–2025. Ready-made audience for brands and marketers. Fast, secure delivery.',metaKeywords:'buy twitter accounts with 1000 followers, twitter accounts with large following'},
+  {id:'t21',name:'Twitter accounts with 5000+ followers',category:'twitter',price:110.00,desc:'Followers: 5000+ · Created: 2010–2024',metaTitle:'Buy Twitter Accounts with 5000+ Followers | DigitalItems',metaDesc:'Get Twitter (X) accounts with 5000+ followers, aged 2010–2024. High-reach accounts for serious marketing and influencer campaigns.',metaKeywords:'buy twitter accounts with 5000 followers, high follower twitter accounts for sale'},
+  {id:'t22',name:'2007 Aged Twitter Accounts',category:'twitter',price:50.00,desc:'Created: 2007',metaTitle:'Buy 2007 Aged Twitter Accounts | DigitalItems.Store',metaDesc:'Get the rarest Twitter (X) accounts available, created in 2007. Ultimate vintage account age for elite marketing needs. Limited availability.',metaKeywords:'2007 aged twitter accounts, buy 2007 twitter account, oldest twitter accounts'},
+  {id:'t23',name:'10 twitter accounts aged',category:'twitter',price:50.00,desc:'Created: 2010–2023 (mix)',metaTitle:'Buy 10 Aged Twitter Accounts (Bulk Pack) | DigitalItems',metaDesc:'Get a bundle of 10 aged Twitter (X) accounts, mixed 2010–2023. Great value bulk pack for agencies and marketers. Instant delivery.',metaKeywords:'buy 10 twitter accounts, bulk twitter accounts, twitter accounts bundle'},
+  {id:'t24',name:'50 twitter accounts mix aged',category:'twitter',price:150.00,desc:'Created: 2010–2021 (mix)',metaTitle:'Buy 50 Aged Twitter Accounts (Bulk Pack) | DigitalItems',metaDesc:'Purchase 50 mixed aged Twitter (X) accounts, 2010–2021. Scale your outreach or automation with a large discounted bundle.',metaKeywords:'buy 50 twitter accounts, twitter accounts bulk pack, mass twitter accounts'},
+  {id:'t25',name:'100 twitter accounts aged',category:'twitter',price:250.00,desc:'Created: 2010–2023',metaTitle:'Buy 100 Aged Twitter Accounts (Bulk Pack) | DigitalItems',metaDesc:'Shop 100 aged Twitter (X) accounts, mixed 2010–2023. Ideal for agencies needing accounts at scale. Fast, secure bulk delivery.',metaKeywords:'buy 100 twitter accounts, twitter accounts wholesale, bulk twitter account pack'},
+  {id:'t26',name:'150 twitter accounts aged - 2023',category:'twitter',price:225.00,desc:'Created: 2023',metaTitle:'Buy 150 Aged Twitter Accounts – 2023 Batch | DigitalItems',metaDesc:'Get 150 Twitter (X) accounts created in 2023, sold as a single bulk batch. Consistent account age for large-scale campaigns.',metaKeywords:'buy 150 twitter accounts, 2023 twitter accounts bulk, twitter account batch'},
+  {id:'t27',name:'150 twitter accounts aged - 2024',category:'twitter',price:150.00,desc:'Created: 2024',metaTitle:'Buy 150 Aged Twitter Accounts – 2024 Batch | DigitalItems',metaDesc:'Purchase 150 Twitter (X) accounts created in 2024, sold as one bulk batch. Cost-effective scale for agencies and marketers.',metaKeywords:'buy 150 twitter accounts 2024, twitter accounts bulk batch'},
+  {id:'t28',name:'1000 twitter accounts aged (mix)',category:'twitter',price:950.00,desc:'Created: 2010–2023 (mix)',metaTitle:'Buy 1000 Aged Twitter Accounts (Wholesale) | DigitalItems',metaDesc:'Wholesale bundle of 1000 mixed aged Twitter (X) accounts, 2010–2023. Best value for large-scale operations. Secure bulk checkout.',metaKeywords:'buy 1000 twitter accounts, wholesale twitter accounts, mass twitter account bundle'},
+  {id:'t29',name:'100 TikTok accounts with 1k followers (2023-2024)',category:'twitter',price:700.00,desc:'Created: 2023–2024 · Followers: 1000+',metaTitle:'Buy 100 TikTok Accounts with 1K+ Followers | DigitalItems',metaDesc:'Get 100 TikTok accounts with 1000+ followers each, created 2023–2024. Bulk pack for agencies and social media resellers.',metaKeywords:'buy tiktok accounts, tiktok accounts with followers, bulk tiktok accounts'},
   // REDDIT
-  {id:'r1',name:'Reddit accounts – blank, without karma',category:'reddit',price:1.40,desc:'Karma: 0 · Created: 6+ days'},
-  {id:'r2',name:'Reddit accounts 50+ karma, 2020–2026 aged',category:'reddit',price:10.00,desc:'Karma: 50+ · Created: 2020–2026'},
-  {id:'r3',name:'Reddit accounts 100+ karma, 2020–2026 aged',category:'reddit',price:13.00,desc:'Karma: 100+ · Created: 2020–2026'},
-  {id:'r4',name:'Reddit accounts 250+ karma, 2020–2026 aged',category:'reddit',price:16.00,desc:'Karma: 250+ · Created: 2020–2026'},
-  {id:'r5',name:'Reddit accounts 500+ karma, 2020–2026 aged',category:'reddit',price:21.00,desc:'Karma: 500+ · Created: 2020–2026'},
-  {id:'r6',name:'1000 karma, 2021–2026 – Reddit accounts',category:'reddit',price:32.00,desc:'Karma: 1000+ · Created: 2021–2026'},
-  {id:'r7',name:'2k karma – Reddit accounts, 2021–2026 aged',category:'reddit',price:45.00,desc:'Karma: 2000 · Created: 2021–2026'},
-  {id:'r8',name:'3k karma – Reddit accounts, 2021–2026 aged',category:'reddit',price:55.00,desc:'Karma: 3000 · Created: 2021–2026'},
-  {id:'r9',name:'2022 aged Reddit account',category:'reddit',price:15.00,desc:'Created: 2022'},
-  {id:'r10',name:'SPECIAL OFFER! 10 Reddit accounts with 1000+ karma (SAVE $120)',category:'reddit',price:200.00,desc:'Karma: 1000+ · Bundle of 10'},
+  {id:'r1',name:'Reddit accounts – blank, without karma',category:'reddit',price:1.40,desc:'Karma: 0 · Created: 6+ days',metaTitle:'Buy Reddit Accounts – No Karma, Blank | DigitalItems.Store',metaDesc:'Buy blank Reddit accounts with zero karma, 6+ days old. Perfect low-cost starting point to build karma and history yourself.',metaKeywords:'buy reddit accounts no karma, blank reddit accounts, cheap reddit accounts'},
+  {id:'r2',name:'Reddit accounts 50+ karma, 2020–2026 aged',category:'reddit',price:10.00,desc:'Karma: 50+ · Created: 2020–2026',metaTitle:'Buy Reddit Accounts with 50+ Karma | DigitalItems.Store',metaDesc:'Purchase Reddit accounts with 50+ karma, aged 2020–2026. Ready to post and comment without new-account restrictions. Fast delivery.',metaKeywords:'buy reddit accounts 50 karma, reddit accounts with karma for sale'},
+  {id:'r3',name:'Reddit accounts 100+ karma, 2020–2026 aged',category:'reddit',price:13.00,desc:'Karma: 100+ · Created: 2020–2026',metaTitle:'Buy Reddit Accounts with 100+ Karma | DigitalItems.Store',metaDesc:'Shop Reddit accounts with 100+ karma, aged 2020–2026. Enough karma to post in most subreddits immediately. Secure, fast delivery.',metaKeywords:'buy reddit accounts 100 karma, reddit account 100 karma for sale'},
+  {id:'r4',name:'Reddit accounts 250+ karma, 2020–2026 aged',category:'reddit',price:16.00,desc:'Karma: 250+ · Created: 2020–2026',metaTitle:'Buy Reddit Accounts with 250+ Karma | DigitalItems.Store',metaDesc:'Get Reddit accounts with 250+ karma, aged 2020–2026. Higher karma unlocks more subreddits for posting and marketing. Fast delivery.',metaKeywords:'buy reddit accounts 250 karma, reddit account 250 karma'},
+  {id:'r5',name:'Reddit accounts 500+ karma, 2020–2026 aged',category:'reddit',price:21.00,desc:'Karma: 500+ · Created: 2020–2026',metaTitle:'Buy Reddit Accounts with 500+ Karma | DigitalItems.Store',metaDesc:'Purchase Reddit accounts with 500+ karma, aged 2020–2026. Trusted karma level for active engagement and marketing use.',metaKeywords:'buy reddit accounts 500 karma, reddit account 500 karma for sale'},
+  {id:'r6',name:'1000 karma, 2021–2026 – Reddit accounts',category:'reddit',price:32.00,desc:'Karma: 1000+ · Created: 2021–2026',metaTitle:'Buy Reddit Accounts with 1000+ Karma | DigitalItems.Store',metaDesc:'Shop Reddit accounts with 1000+ karma, aged 2021–2026. Strong karma history for serious Reddit marketing campaigns.',metaKeywords:'buy reddit accounts 1000 karma, high karma reddit accounts'},
+  {id:'r7',name:'2k karma – Reddit accounts, 2021–2026 aged',category:'reddit',price:45.00,desc:'Karma: 2000 · Created: 2021–2026',metaTitle:'Buy Reddit Accounts with 2000+ Karma | DigitalItems.Store',metaDesc:'Get Reddit accounts with 2000 karma, aged 2021–2026. Premium karma level for high-visibility posting and engagement.',metaKeywords:'buy reddit accounts 2000 karma, 2k karma reddit accounts'},
+  {id:'r8',name:'3k karma – Reddit accounts, 2021–2026 aged',category:'reddit',price:55.00,desc:'Karma: 3000 · Created: 2021–2026',metaTitle:'Buy Reddit Accounts with 3000+ Karma | DigitalItems.Store',metaDesc:'Purchase Reddit accounts with 3000 karma, aged 2021–2026. Top-tier karma for maximum credibility and subreddit access.',metaKeywords:'buy reddit accounts 3000 karma, 3k karma reddit accounts for sale'},
+  {id:'r9',name:'2022 aged Reddit account',category:'reddit',price:15.00,desc:'Created: 2022',metaTitle:'Buy 2022 Aged Reddit Accounts | DigitalItems.Store',metaDesc:'Buy Reddit accounts created in 2022. Aged account history for trusted, natural-looking Reddit activity. Fast, secure delivery.',metaKeywords:'2022 aged reddit accounts, buy 2022 reddit account'},
+  {id:'r10',name:'SPECIAL OFFER! 10 Reddit accounts with 1000+ karma (SAVE $120)',category:'reddit',price:200.00,desc:'Karma: 1000+ · Bundle of 10',metaTitle:'10 Reddit Accounts with 1000+ Karma – Bundle Deal | DigitalItems',metaDesc:'Special bundle: 10 Reddit accounts with 1000+ karma each, save $120 vs buying individually. Perfect for agencies and marketers.',metaKeywords:'reddit accounts bundle, buy 10 reddit accounts, reddit account pack deal'},
   // MARKETING
-  {id:'m1',name:'Reddit Top 10 Hot Section (500–1,500 Avg Karma Subreddits)',category:'marketing',price:100.00,desc:'Guaranteed Top 10 placement'},
-  {id:'m2',name:'Reddit Top 10 Hot Section (1,500–3,000 Avg Karma Subreddits)',category:'marketing',price:200.00,desc:'Guaranteed Top 10 placement'},
-  {id:'m3',name:'Reddit Top 10 Hot Section (3,000+ Avg Karma Subreddits)',category:'marketing',price:350.00,desc:'Guaranteed Top 10 placement'},
-  {id:'m4',name:'Reddit Marketing Service: Boost Brand Awareness',category:'marketing',price:350.00,desc:'Subreddit posts & comments · Brand awareness'},
+  {id:'m1',name:'Reddit Top 10 Hot Section (500–1,500 Avg Karma Subreddits)',category:'marketing',price:100.00,desc:'Guaranteed Top 10 placement',metaTitle:'Reddit Hot Section Placement – 500–1,500 Karma Subs',metaDesc:'Guaranteed Top 10 Hot section placement in subreddits averaging 500–1,500 karma. Boost visibility with real Reddit marketing.',metaKeywords:'reddit hot section placement, reddit marketing service, boost reddit post'},
+  {id:'m2',name:'Reddit Top 10 Hot Section (1,500–3,000 Avg Karma Subreddits)',category:'marketing',price:200.00,desc:'Guaranteed Top 10 placement',metaTitle:'Reddit Hot Section Placement – 1,500–3,000 Karma Subs',metaDesc:'Guaranteed Top 10 Hot section placement in mid-size subreddits (1,500–3,000 avg karma). Reach a larger, engaged Reddit audience.',metaKeywords:'reddit hot section marketing, mid subreddit promotion, reddit visibility service'},
+  {id:'m3',name:'Reddit Top 10 Hot Section (3,000+ Avg Karma Subreddits)',category:'marketing',price:350.00,desc:'Guaranteed Top 10 placement',metaTitle:'Reddit Hot Section Placement – 3,000+ Karma Subs',metaDesc:'Guaranteed Top 10 Hot section placement in large, high-karma subreddits (3,000+ average). Maximum reach for serious brand promotion.',metaKeywords:'reddit big subreddit promotion, reddit hot section top 10, large subreddit marketing'},
+  {id:'m4',name:'Reddit Marketing Service: Boost Brand Awareness',category:'marketing',price:350.00,desc:'Subreddit posts & comments · Brand awareness',metaTitle:'Reddit Marketing Service – Boost Brand Awareness',metaDesc:'Grow your brand on Reddit with organic-style subreddit posts and comments. Genuine engagement to boost awareness and reach.',metaKeywords:'reddit marketing service, reddit brand promotion, reddit engagement service'},
 ];
 
 // ════════════════════════════════════════
@@ -2910,6 +2918,18 @@ const PAGE_DESC = {
   privacy: 'Privacy Policy for DigitalItems.Store. Learn how we collect, use, and protect your personal information.'
 };
 
+const PAGE_KEYWORDS = {
+  home: 'buy twitter accounts, aged twitter accounts, buy reddit accounts, reddit accounts with karma, reddit marketing service, buy social media accounts, old twitter accounts, buy aged accounts',
+  twitter: 'buy aged twitter accounts, old twitter accounts for sale, twitter accounts with followers, buy verified twitter accounts, aged x accounts, buy twitter accounts online',
+  reddit: 'buy reddit accounts, reddit accounts with karma, high karma reddit accounts, aged reddit accounts, buy reddit karma accounts, reddit account marketplace',
+  marketing: 'reddit marketing service, reddit hot section placement, boost reddit post, subreddit promotion, reddit brand awareness, reddit engagement service',
+  about: 'digitalitems store, aged accounts seller, social media accounts company, digitalitems ltd',
+  contact: 'contact digitalitems, digitalitems support, buy accounts customer service',
+  refund: 'digitalitems refund policy, digital product refund, aged accounts refund',
+  terms: 'digitalitems terms of service, aged accounts purchase terms',
+  privacy: 'digitalitems privacy policy, data protection digitalitems'
+};
+
 function navigate(page, skipPush) {
   // Remove anti-flash style once real routing takes over
   var af = document.getElementById('anti-flash-style');
@@ -2942,6 +2962,23 @@ function navigate(page, skipPush) {
     let m = document.querySelector('meta[name="description"]');
     if (m) m.setAttribute('content', PAGE_DESC[page]);
   }
+  if (PAGE_KEYWORDS[page]) {
+    let mk = document.querySelector('meta[name="keywords"]');
+    if (mk) mk.setAttribute('content', PAGE_KEYWORDS[page]);
+  }
+  // If this built-in page has admin-edited SEO (via Pages tab), it overrides the defaults above
+  if (typeof customPages !== 'undefined' && customPages && customPages[page]) {
+    const cp = customPages[page];
+    if (cp.metaTitle) document.title = cp.metaTitle;
+    if (cp.metaDesc) {
+      let m = document.querySelector('meta[name="description"]');
+      if (m) m.setAttribute('content', cp.metaDesc);
+    }
+    if (cp.metaKeywords) {
+      let mk = document.querySelector('meta[name="keywords"]');
+      if (mk) mk.setAttribute('content', cp.metaKeywords);
+    }
+  }
   // Catalog pages: apply admin-edited SEO title/description if set
   if (page === 'twitter' || page === 'reddit' || page === 'marketing') {
     const seo = catalogSeo(page);
@@ -2950,6 +2987,10 @@ function navigate(page, skipPush) {
       if (seo.desc) {
         let m = document.querySelector('meta[name="description"]');
         if (m) m.setAttribute('content', seo.desc);
+      }
+      if (seo.keywords) {
+        let mk = document.querySelector('meta[name="keywords"]');
+        if (mk) mk.setAttribute('content', seo.keywords);
       }
     }
   }
@@ -3292,6 +3333,8 @@ function openProduct(id, skipPush) {
   else document.title = 'Buy ' + p.name + ' – DigitalItems.Store';
   const metaEl = document.querySelector('meta[name="description"]');
   if (metaEl && p.metaDesc) metaEl.setAttribute('content', p.metaDesc);
+  const metaKwEl = document.querySelector('meta[name="keywords"]');
+  if (metaKwEl && p.metaKeywords) metaKwEl.setAttribute('content', p.metaKeywords);
 
   injectProductSchema(p);
 
@@ -3343,12 +3386,21 @@ function openProduct(id, skipPush) {
     </div>
   `;
   navigate('product', true);
+  // Re-apply product-specific SEO — navigate() just reset title/description/keywords
+  // to the generic 'product' page defaults, so we override them again here.
+  if (p.metaTitle) document.title = p.metaTitle;
+  else document.title = 'Buy ' + p.name + ' – DigitalItems.Store';
+  if (metaEl && p.metaDesc) metaEl.setAttribute('content', p.metaDesc);
+  if (metaKwEl && p.metaKeywords) metaKwEl.setAttribute('content', p.metaKeywords);
   trackEvent('view_item', { currency: 'USD', value: p.price, items: [productToItem(p, 1)] });
   // Push a real URL for this product (for refresh + sharing + SEO)
+  const prodSlug = p.slug || slugify(p.name);
   if (!skipPush) {
-    const slug = p.slug || slugify(p.name);
-    history.pushState({page:'product', productId: id, slug}, '', '/products/' + slug);
+    history.pushState({page:'product', productId: id, slug: prodSlug}, '', '/products/' + prodSlug);
   }
+  // Fix canonical — navigate() set it to the generic /product route, point it at the real product URL
+  const prodCanon = document.querySelector('link[rel="canonical"]');
+  if (prodCanon) prodCanon.setAttribute('href', 'https://digitalitems.store/products/' + prodSlug);
 }
 
 function detailQtyChange(d) {
@@ -5613,6 +5665,7 @@ function openAddProduct() {
   const applyAll = document.getElementById('prod-image-applyall'); if (applyAll) applyAll.checked = false;
   document.getElementById('prod-metatitle').value = '';
   document.getElementById('prod-metadesc').value = '';
+  document.getElementById('prod-metakeywords').value = '';
   document.getElementById('product-modal').classList.add('open');
 }
 
@@ -5637,6 +5690,7 @@ function editProduct(id) {
   const applyAllEdit = document.getElementById('prod-image-applyall'); if (applyAllEdit) applyAllEdit.checked = false;
   document.getElementById('prod-metatitle').value = p.metaTitle || '';
   document.getElementById('prod-metadesc').value = p.metaDesc || '';
+  document.getElementById('prod-metakeywords').value = p.metaKeywords || '';
   document.getElementById('product-modal').classList.add('open');
 }
 
@@ -5678,6 +5732,7 @@ async function saveProduct() {
   const image = document.getElementById('prod-image').value.trim();
   const metaTitle = document.getElementById('prod-metatitle').value.trim();
   const metaDesc = document.getElementById('prod-metadesc').value.trim();
+  const metaKeywords = document.getElementById('prod-metakeywords').value.trim();
   let slug = document.getElementById('prod-slug').value.trim();
   if (!slug) slug = slugify(name);
   else slug = slugify(slug);
@@ -5694,9 +5749,9 @@ async function saveProduct() {
   }
   if (editingProductId) {
     const idx = allProducts.findIndex(p => p.id === editingProductId);
-    if (idx > -1) allProducts[idx] = {...allProducts[idx], name, price, desc, category, fullDesc, image, metaTitle, metaDesc, slug, stock};
+    if (idx > -1) allProducts[idx] = {...allProducts[idx], name, price, desc, category, fullDesc, image, metaTitle, metaDesc, metaKeywords, slug, stock};
   } else {
-    allProducts.push({id:'p'+Date.now(), name, price, desc, category, fullDesc, image, metaTitle, metaDesc, slug, stock});
+    allProducts.push({id:'p'+Date.now(), name, price, desc, category, fullDesc, image, metaTitle, metaDesc, metaKeywords, slug, stock});
   }
   // Apply image to all products in the same category if checkbox is checked
   if (applyAll && image) {
@@ -6216,18 +6271,21 @@ const CATALOG_SEED = [
   { id: 'twitter', name: 'Twitter', url: '/twitter-accounts',
     titleHtml: '<span>Twitter</span> Accounts',
     sub: 'Aged, verified Twitter accounts — choose by year or follower count',
-    seoTitle: 'Buy Aged Twitter Accounts — DigitalItems.Store',
-    seoDesc: 'Buy high-quality aged and verified Twitter (X) accounts by year and follower count. Fast delivery, trusted seller.' },
+    seoTitle: 'Buy Aged Twitter Accounts (2007–2024) with Followers | DigitalItems',
+    seoDesc: 'Shop aged Twitter (X) accounts from 2007–2024, with or without followers, single or bulk. Instant delivery, secure checkout, trusted seller.',
+    seoKeywords: 'buy aged twitter accounts, old twitter accounts for sale, twitter accounts with followers, buy twitter accounts in bulk, aged x accounts' },
   { id: 'reddit', name: 'Reddit', url: '/reddit-accounts',
     titleHtml: '<span>Reddit</span> Accounts',
     sub: 'High-karma Reddit accounts, aged and verified',
-    seoTitle: 'Buy Reddit Accounts with Karma — DigitalItems.Store',
-    seoDesc: 'Buy aged Reddit accounts with high karma. Verified, ready to use, fast delivery.' },
+    seoTitle: 'Buy Reddit Accounts with Karma (50–3000+) | DigitalItems',
+    seoDesc: 'Buy aged Reddit accounts with 50 to 3000+ karma, 2020–2026. Ready to post immediately. Verified sellers, fast, secure delivery.',
+    seoKeywords: 'buy reddit accounts, reddit accounts with karma, high karma reddit accounts, aged reddit accounts for sale, buy reddit karma' },
   { id: 'marketing', name: 'Marketing', url: '/reddit-marketing',
     titleHtml: 'Reddit <span>Marketing</span>',
     sub: 'Guaranteed placement in Reddit Hot sections',
-    seoTitle: 'Reddit Marketing Services — DigitalItems.Store',
-    seoDesc: 'Reddit marketing with guaranteed placement in Hot sections. Boost visibility and engagement.' }
+    seoTitle: 'Reddit Marketing Services — Guaranteed Hot Section Placement',
+    seoDesc: 'Professional Reddit marketing with guaranteed Top 10 Hot section placement and organic-style engagement. Boost your brand visibility today.',
+    seoKeywords: 'reddit marketing service, reddit hot section placement, subreddit promotion, boost reddit post, reddit brand awareness service' }
 ];
 
 let catalogsData = null; // array of catalog objects
@@ -6326,6 +6384,8 @@ function openCategory(id, skipPush) {
   if (c.seoTitle) document.title = c.seoTitle;
   const m = document.querySelector('meta[name="description"]');
   if (m && c.seoDesc) m.setAttribute('content', c.seoDesc);
+  const mk = document.querySelector('meta[name="keywords"]');
+  if (mk && c.seoKeywords) mk.setAttribute('content', c.seoKeywords);
   let canon = document.querySelector('link[rel="canonical"]');
   if (canon) canon.setAttribute('href', 'https://digitalitems.store' + c.url);
   renderProducts(id, 'category-list');
@@ -6334,7 +6394,7 @@ function openCategory(id, skipPush) {
 // SEO helper for legacy category pages
 function catalogSeo(key) {
   const c = getCatalogById(key);
-  return c ? { title: c.seoTitle, desc: c.seoDesc } : null;
+  return c ? { title: c.seoTitle, desc: c.seoDesc, keywords: c.seoKeywords } : null;
 }
 
 // ---- Admin: catalog management ----
@@ -6413,6 +6473,11 @@ function editCatalog(id) {
         <textarea id="ce-seodesc" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:vertical">${c.seoDesc||''}</textarea>
       </div>
 
+      <div class="form-group">
+        <label>SEO Keywords <span style="color:var(--muted);font-weight:400">(comma-separated, for the meta keywords tag)</span></label>
+        <input type="text" id="ce-seokeywords" value="${(c.seoKeywords||'').replace(/"/g,'&quot;')}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+
       <div style="display:flex;gap:10px;margin-top:8px">
         <button class="btn btn-primary" onclick="saveCatalog()">Save</button>
         <button class="btn btn-ghost" onclick="document.getElementById('catalog-editor').innerHTML=''">Cancel</button>
@@ -6442,6 +6507,7 @@ async function saveCatalog() {
     sub: document.getElementById('ce-sub').value.trim(),
     seoTitle: document.getElementById('ce-seotitle').value.trim(),
     seoDesc: document.getElementById('ce-seodesc').value.trim(),
+    seoKeywords: document.getElementById('ce-seokeywords').value.trim(),
     descHtml: (editingCatalogId ? (getCatalogById(editingCatalogId)||{}).descHtml : '') || ''
   };
 
@@ -6540,6 +6606,7 @@ function openAddPage() {
   document.getElementById('page-content').value = '';
   document.getElementById('page-metatitle').value = '';
   document.getElementById('page-metadesc').value = '';
+  document.getElementById('page-metakeywords').value = '';
   document.getElementById('page-slug').disabled = false;
   document.getElementById('page-modal').classList.add('open');
 }
@@ -6557,6 +6624,7 @@ function editBuiltinPage(key) {
   document.getElementById('page-content').value = existing ? existing.content : getBuiltinPageContent(key);
   document.getElementById('page-metatitle').value = existing ? (existing.metaTitle||'') : (PAGE_TITLES[key]||'');
   document.getElementById('page-metadesc').value = existing ? (existing.metaDesc||'') : (PAGE_DESC[key]||'');
+  document.getElementById('page-metakeywords').value = existing ? (existing.metaKeywords||'') : (PAGE_KEYWORDS[key]||'');
   document.getElementById('page-modal').classList.add('open');
 }
 
@@ -6582,6 +6650,7 @@ function editCustomPage(slug) {
   document.getElementById('page-content').value = p.content;
   document.getElementById('page-metatitle').value = p.metaTitle || '';
   document.getElementById('page-metadesc').value = p.metaDesc || '';
+  document.getElementById('page-metakeywords').value = p.metaKeywords || '';
   document.getElementById('page-modal').classList.add('open');
 }
 
@@ -6591,9 +6660,10 @@ async function savePage() {
   const content = document.getElementById('page-content').value;
   const metaTitle = document.getElementById('page-metatitle').value.trim();
   const metaDesc = document.getElementById('page-metadesc').value.trim();
+  const metaKeywords = document.getElementById('page-metakeywords').value.trim();
   if (!title || !slug) { showToast('Title and slug required'); return; }
   const key = editingPageSlug || slug;
-  customPages[key] = { title, slug, content, metaTitle, metaDesc, custom: !BUILTIN_PAGES[key] };
+  customPages[key] = { title, slug, content, metaTitle, metaDesc, metaKeywords, custom: !BUILTIN_PAGES[key] };
   localStorage.setItem('di_pages', JSON.stringify(customPages));
   // Sync to Worker
   try {
