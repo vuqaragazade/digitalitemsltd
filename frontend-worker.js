@@ -187,6 +187,54 @@ export default {
       }
     }
 
+    // Category pages (Twitter/Reddit/Marketing/custom): inject SEO title/description
+    // server-side so bots/crawlers (including Google Ads) see the correct meta in raw HTML.
+    try {
+      const catRes = await fetch(BACKEND + '/catalogs', { cf: { cacheTtl: 300, cacheEverything: true } });
+      const catData = await catRes.json();
+      const catalogs = Array.isArray(catData.catalogs) ? catData.catalogs : [];
+      const catalog = catalogs.find(c => c.url === url.pathname);
+      if (catalog && (catalog.seoTitle || catalog.seoDesc)) {
+        const assetRes = await env.ASSETS.fetch(new Request('https://assets.local/index.html'));
+        let html = await assetRes.text();
+        const esc = (s) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+        if (catalog.seoTitle) {
+          html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(catalog.seoTitle)}</title>`);
+          html = html.replace(
+            /<meta property="og:title" content="[^"]*" \/>/,
+            `<meta property="og:title" content="${esc(catalog.seoTitle)}" />`
+          );
+        }
+        if (catalog.seoDesc) {
+          html = html.replace(
+            /<meta name="description" content="[^"]*" \/>/,
+            `<meta name="description" content="${esc(catalog.seoDesc)}" />`
+          );
+          html = html.replace(
+            /<meta property="og:description" content="[^"]*" \/>/,
+            `<meta property="og:description" content="${esc(catalog.seoDesc)}" />`
+          );
+        }
+        if (catalog.seoKeywords) {
+          html = html.replace(
+            /<meta name="keywords" content="[^"]*" \/>/,
+            `<meta name="keywords" content="${esc(catalog.seoKeywords)}" />`
+          );
+        }
+        html = html.replace(
+          '<link rel="canonical" href="https://digitalitems.store/" />',
+          `<link rel="canonical" href="https://digitalitems.store${esc(catalog.url)}" />`
+        );
+
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' }
+        });
+      }
+    } catch (e) {
+      // Fall through to normal static serving on any error
+    }
+
     // Everything else: serve from static assets (SPA)
     return env.ASSETS.fetch(request);
   }
