@@ -2128,6 +2128,7 @@
         <div class="admin-nav-item" onclick="adminTab('pages',event)">📄 Pages</div>
         <div class="admin-nav-item" onclick="adminTab('catalogs',event)">🗂 Catalogs</div>
         <div class="admin-nav-item" onclick="adminTab('blog',event)">✍️ Blog</div>
+        <div class="admin-nav-item" onclick="adminTab('marketing',event)">📧 Email Marketing</div>
         <div class="admin-nav-item" onclick="adminTab('users',event)">👥 Users</div>
         <div class="admin-nav-item" onclick="adminTab('profile',event)">👤 Profile</div>
         <div class="admin-nav-item" onclick="adminTab('settings',event)">⚙️ Settings</div>
@@ -2359,6 +2360,52 @@
           </div>
         </div>
 
+        <!-- Email Marketing Tab -->
+        <div id="admin-marketing-tab" style="display:none">
+          <div class="admin-title">Email Marketing</div>
+
+          <div class="checkout-box" style="max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:8px;padding-bottom:16px;border-bottom:1px solid var(--border)">✨ Create Campaign</h2>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Pick who to email, describe the campaign, and AI drafts the subject + body. Review, edit, or regenerate before sending.</p>
+
+            <div class="form-group">
+              <label>Send To</label>
+              <select id="mkt-segment" aria-label="Customer segment" onchange="updateSegmentCount()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none">
+                <option value="">Loading segments…</option>
+              </select>
+              <p id="mkt-segment-count" style="font-size:11px;color:var(--muted);margin-top:4px"></p>
+            </div>
+
+            <div class="form-group">
+              <label>Campaign Brief</label>
+              <textarea id="mkt-instructions" rows="3" aria-label="Describe the email campaign" placeholder="e.g. 20% off all Reddit accounts this weekend only, code REDDIT20. Friendly, urgent tone." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:vertical"></textarea>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Describe the offer, tone, and any discount code. AI will draft the full email.</p>
+            </div>
+
+            <button class="btn btn-primary" onclick="generateMarketingEmail()" id="mkt-gen-btn">Generate Email</button>
+            <div id="mkt-gen-status" style="margin-top:14px;font-size:13px;color:var(--muted)"></div>
+          </div>
+
+          <!-- Preview / Edit -->
+          <div id="mkt-preview" class="checkout-box" style="display:none;max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">Preview & Edit</h2>
+            <div class="form-group">
+              <label>Subject</label>
+              <input type="text" id="mkt-edit-subject" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+            </div>
+            <div class="form-group">
+              <label>Body (HTML)</label>
+              <textarea id="mkt-edit-body" rows="12" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="sendMarketingEmail()" id="mkt-send-btn">Send Campaign</button>
+              <button class="btn btn-ghost" onclick="regenerateMarketingEmail()">🔄 Regenerate</button>
+              <button class="btn btn-ghost" onclick="document.getElementById('mkt-preview').style.display='none'">Discard</button>
+            </div>
+            <div id="mkt-send-status" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
+          </div>
+        </div>
+
         <div id="admin-users-tab" style="display:none">
           <div class="admin-title">Users</div>
           <input aria-label="Search by email or name..." type="text" id="user-search" oninput="renderAdminUsers()" placeholder="Search by email or name..." style="width:100%;max-width:360px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;margin-bottom:16px" />
@@ -2479,6 +2526,17 @@
 
             <button class="btn btn-primary" onclick="saveTracking()">Save Tracking Codes</button>
             <p style="font-size:11px;color:var(--muted);margin-top:12px">⚠ Codes are validated before saving to prevent breaking the site.</p>
+          </div>
+
+          <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:8px;padding-bottom:16px;border-bottom:1px solid var(--border)">Trustpilot Review Invitations</h2>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Automatically invite customers to leave a Trustpilot review after their order is delivered. Get your unique invite address from Trustpilot Business → Get reviews → Invitation methods → Automatic Invitations (AFS).</p>
+            <div class="form-group">
+              <label>Trustpilot Invite Email</label>
+              <input aria-label="xxxxxxxxxx@invite.trustpilot.com" type="text" id="tp-invite-email" placeholder="xxxxxxxxxx@invite.trustpilot.com" />
+            </div>
+            <button class="btn btn-primary" onclick="saveTrustpilotSettings()">Save</button>
+            <span id="tp-save-status" style="font-size:13px;color:var(--muted);margin-left:10px"></span>
           </div>
 
           <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
@@ -4534,7 +4592,7 @@ function adminLogout() {
 }
 
 function adminTab(tab, evt) {
-  ['orders','analytics','products','pages','catalogs','blog','users','profile','settings'].forEach(t => {
+  ['orders','analytics','products','pages','catalogs','blog','marketing','users','profile','settings'].forEach(t => {
     const el = document.getElementById('admin-'+t+'-tab');
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
@@ -4547,9 +4605,10 @@ function adminTab(tab, evt) {
   if (tab === 'pages') renderAdminPages();
   if (tab === 'catalogs') renderAdminCatalogs();
   if (tab === 'blog') loadAdminBlogs();
+  if (tab === 'marketing') loadCustomerSegments();
   if (tab === 'users') renderAdminUsers();
   if (tab === 'profile') loadAdminProfile();
-  if (tab === 'settings') { loadPaymentLimits(); loadTrackingSettings(); }
+  if (tab === 'settings') { loadPaymentLimits(); loadTrackingSettings(); loadTrustpilotSettings(); }
   if (tab === 'settings') loadAdminProfile();
 }
 
@@ -5467,6 +5526,110 @@ async function changeBlogCategory(slug, category) {
   } catch(e) { showToast('Could not update category'); }
 }
 
+// ════════════════════════════════════════
+// EMAIL MARKETING — segmented campaigns with AI drafting
+// ════════════════════════════════════════
+let generatedMarketingEmail = null;
+let mktSegments = [];
+
+async function loadCustomerSegments() {
+  const sel = document.getElementById('mkt-segment');
+  sel.innerHTML = '<option value="">Loading segments…</option>';
+  try {
+    const res = await fetch(WORKER_URL + '/customer-segments', { headers: { 'X-Admin-Password': adminPassword } });
+    const data = await res.json();
+    mktSegments = data.segments || [];
+    if (!mktSegments.length) {
+      sel.innerHTML = '<option value="">No customers found yet</option>';
+      return;
+    }
+    sel.innerHTML = mktSegments.map(s => `<option value="${s.id}">${s.name} (${s.count} customer${s.count===1?'':'s'})</option>`).join('');
+    updateSegmentCount();
+  } catch(e) {
+    sel.innerHTML = '<option value="">Failed to load segments</option>';
+  }
+}
+
+function updateSegmentCount() {
+  const sel = document.getElementById('mkt-segment');
+  const seg = mktSegments.find(s => s.id === sel.value);
+  const el = document.getElementById('mkt-segment-count');
+  if (el) el.textContent = seg ? `This will reach ${seg.count} customer${seg.count===1?'':'s'}.` : '';
+}
+
+async function generateMarketingEmail() {
+  const instructions = document.getElementById('mkt-instructions').value.trim();
+  const segSel = document.getElementById('mkt-segment');
+  const segmentId = segSel.value;
+  const seg = mktSegments.find(s => s.id === segmentId);
+  if (!instructions) { showToast('Describe the campaign first'); return; }
+  if (!segmentId) { showToast('Choose who to send to'); return; }
+
+  const btn = document.getElementById('mkt-gen-btn');
+  const status = document.getElementById('mkt-gen-status');
+  btn.disabled = true;
+  status.innerHTML = '⏳ AI is drafting your email...';
+
+  try {
+    const res = await fetch(WORKER_URL + '/generate-marketing-email', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ instructions, segmentName: seg ? seg.name : '' })
+    });
+    const data = await res.json();
+    if (data.error) { status.innerHTML = '<span style="color:#f87171">'+data.error+'</span>'; btn.disabled = false; return; }
+    generatedMarketingEmail = data.email;
+    fillMarketingPreview(data.email);
+    status.innerHTML = '<span style="color:#4ade80">✓ Draft ready — review below before sending.</span>';
+  } catch(e) {
+    status.innerHTML = '<span style="color:#f87171">Generation failed: '+e.message+'</span>';
+  }
+  btn.disabled = false;
+}
+
+function fillMarketingPreview(email) {
+  document.getElementById('mkt-preview').style.display = 'block';
+  document.getElementById('mkt-edit-subject').value = email.subject || '';
+  document.getElementById('mkt-edit-body').value = email.bodyHtml || '';
+  document.getElementById('mkt-send-status').textContent = '';
+  document.getElementById('mkt-preview').scrollIntoView({behavior:'smooth'});
+}
+
+async function regenerateMarketingEmail() {
+  await generateMarketingEmail();
+}
+
+async function sendMarketingEmail() {
+  const segmentId = document.getElementById('mkt-segment').value;
+  const seg = mktSegments.find(s => s.id === segmentId);
+  const subject = document.getElementById('mkt-edit-subject').value.trim();
+  const bodyHtml = document.getElementById('mkt-edit-body').value.trim();
+  const status = document.getElementById('mkt-send-status');
+  if (!subject || !bodyHtml) { status.innerHTML = '<span style="color:#f87171">Subject and body are required.</span>'; return; }
+
+  const confirmMsg = `Send this email to ${seg ? seg.count : '?'} customer(s) in "${seg ? seg.name : segmentId}"?\n\nThis cannot be undone.`;
+  if (!confirm(confirmMsg)) return;
+
+  const btn = document.getElementById('mkt-send-btn');
+  btn.disabled = true;
+  status.textContent = '⏳ Sending… this may take a moment for larger segments.';
+
+  try {
+    const res = await fetch(WORKER_URL + '/send-marketing-email', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ segmentId, subject, bodyHtml })
+    });
+    const data = await res.json();
+    if (data.error) { status.innerHTML = '<span style="color:#f87171">'+data.error+'</span>'; btn.disabled = false; return; }
+    status.innerHTML = `<span style="color:#4ade80">✓ Sent to ${data.sent} customer(s)${data.failed?', '+data.failed+' failed':''}.</span>`;
+    showToast('Campaign sent!');
+  } catch(e) {
+    status.innerHTML = '<span style="color:#f87171">Send failed: '+e.message+'</span>';
+  }
+  btn.disabled = false;
+}
+
 async function loadAdminBlogs() {
   await loadBlogCategories();
   const el = document.getElementById('admin-blog-list');
@@ -5989,6 +6152,34 @@ async function loadTrackingSettings() {
     set('track-yandex', t.yandex); set('track-metapixel', t.metapixel);
     set('track-tiktok', t.tiktok); set('track-customhead', t.customhead);
   } catch(e) {}
+}
+
+async function loadTrustpilotSettings() {
+  try {
+    const res = await fetch(WORKER_URL + '/trustpilot-settings', { headers: { 'X-Admin-Password': adminPassword } });
+    const data = await res.json();
+    const el = document.getElementById('tp-invite-email');
+    if (el) el.value = (data.trustpilot && data.trustpilot.inviteEmail) || '';
+  } catch(e) {}
+}
+
+async function saveTrustpilotSettings() {
+  const status = document.getElementById('tp-save-status');
+  const inviteEmail = document.getElementById('tp-invite-email').value.trim();
+  status.textContent = 'Saving…';
+  try {
+    const res = await fetch(WORKER_URL + '/trustpilot-settings', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ inviteEmail })
+    });
+    const data = await res.json();
+    if (data.error) { status.innerHTML = '<span style="color:#f87171">'+data.error+'</span>'; return; }
+    status.innerHTML = '<span style="color:#4ade80">✓ Saved</span>';
+    setTimeout(()=>{ status.textContent=''; }, 2000);
+  } catch(e) {
+    status.innerHTML = '<span style="color:#f87171">Failed to save</span>';
+  }
 }
 
 // Inject tracking scripts on every page load (for all visitors)
