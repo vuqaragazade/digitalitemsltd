@@ -2565,7 +2565,7 @@
 
           <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:8px;padding-bottom:16px;border-bottom:1px solid var(--border)">Import Customers (Shopify CSV)</h2>
-            <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Upload your Shopify <strong>Customers</strong> export (not Orders — from Shopify Admin → Customers → Export). These contacts join the "All Customers" email segment even if they have no order on this site.</p>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Upload your Shopify <strong>Customers</strong> export (not Orders — from Shopify Admin → Customers → Export, "Plain CSV file"). These contacts join the "All Customers" email segment even if they have no order on this site. Anyone marked "Accepts Email Marketing: No" is automatically skipped to protect deliverability and stay compliant.</p>
             <input type="file" id="import-customers-file" accept=".csv" aria-label="Upload customers CSV file for import" style="font-size:13px;color:var(--muted);margin-bottom:14px" />
             <button class="btn btn-primary" onclick="importShopifyCustomersCSV()" id="import-customers-btn">Import Customers CSV</button>
             <div id="import-customers-progress" style="margin-top:14px;font-size:13px;color:var(--muted)"></div>
@@ -6406,10 +6406,11 @@ async function importShopifyCustomersCSV() {
 
   try {
     const text = await file.text();
-    const contacts = parseShopifyCustomersCSV(text);
-    if (contacts.length === 0) { progress.textContent = 'No customer emails found in file.'; btn.disabled = false; return; }
+    const { contacts, skippedNoConsent } = parseShopifyCustomersCSV(text);
+    if (contacts.length === 0) { progress.textContent = 'No opted-in customer emails found in file.'; btn.disabled = false; return; }
 
-    progress.textContent = `Parsed ${contacts.length} contacts. Importing...`;
+    const consentNote = skippedNoConsent > 0 ? ` (skipped ${skippedNoConsent} who opted out of marketing)` : '';
+    progress.textContent = `Parsed ${contacts.length} contacts${consentNote}. Importing...`;
 
     const batchSize = 200;
     let added = 0, updated = 0, total = 0;
@@ -6437,7 +6438,7 @@ async function importShopifyCustomersCSV() {
 // Robustly matches header names case-insensitively since Shopify's export can vary slightly.
 function parseShopifyCustomersCSV(text) {
   const rows = parseCSVRows(text);
-  if (rows.length < 2) return [];
+  if (rows.length < 2) return { contacts: [], skippedNoConsent: 0 };
   const headers = rows[0].map(h => h.trim().toLowerCase());
   const idx = (names) => {
     for (const n of names) {
@@ -6450,14 +6451,21 @@ function parseShopifyCustomersCSV(text) {
   const firstIdx = idx(['first name', 'firstname']);
   const lastIdx = idx(['last name', 'lastname']);
   const nameIdx = idx(['name']);
-  if (emailIdx === -1) return [];
+  const consentIdx = idx(['accepts email marketing']);
+  if (emailIdx === -1) return { contacts: [], skippedNoConsent: 0 };
 
   const seen = new Set();
   const contacts = [];
+  let skippedNoConsent = 0;
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
     const email = (row[emailIdx] || '').trim();
     if (!email || !email.includes('@') || seen.has(email.toLowerCase())) continue;
+    // Respect marketing consent: skip anyone who explicitly opted out (compliance + deliverability)
+    if (consentIdx > -1) {
+      const consent = (row[consentIdx] || '').trim().toLowerCase();
+      if (consent === 'no') { skippedNoConsent++; continue; }
+    }
     seen.add(email.toLowerCase());
     let name = '';
     if (firstIdx > -1 || lastIdx > -1) {
@@ -6467,7 +6475,7 @@ function parseShopifyCustomersCSV(text) {
     }
     contacts.push({ email, name });
   }
-  return contacts;
+  return { contacts, skippedNoConsent };
 }
 
 // Parse Shopify orders CSV into our order format
