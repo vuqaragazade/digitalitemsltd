@@ -2873,7 +2873,7 @@ let allProducts = JSON.parse(localStorage.getItem('di_products') || 'null') || P
 // Backfill slugs for products that don't have one
 allProducts.forEach(p => { if (!p.slug) p.slug = slugifyInit(p.name); });
 function slugifyInit(text) {
-  return (text || '').toLowerCase().trim().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+  return (text || '').toLowerCase().trim().replace(/[\u2010-\u2015]/g,'-').replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
 }
 let adminLoggedIn = JSON.parse(localStorage.getItem('di_admin_logged') || 'false');
 let adminPassword = localStorage.getItem('di_admin_pass_session') || '';
@@ -5690,6 +5690,7 @@ function setStockMode(mode) {
 
 function slugify(text) {
   return (text || '').toLowerCase().trim()
+    .replace(/[\u2010-\u2015]/g, '-')
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')

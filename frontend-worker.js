@@ -115,6 +115,15 @@ export default {
               headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' }
             });
           }
+          // Blog post not found by slug — still fix the canonical to point at THIS URL
+          // (never leave it defaulting to the homepage).
+          {
+            const esc2 = (s) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            html = html.replace(
+              '<link rel="canonical" href="https://digitalitems.store/" />',
+              `<link rel="canonical" href="https://digitalitems.store/blog/${esc2(slug)}" />`
+            );
+          }
           return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
         } catch (e) {
           // Fall back to normal static serving
@@ -139,6 +148,7 @@ export default {
             // Match by stored slug first; fall back to a computed slug from the name
             // in case older backend data predates the slug field.
             const computeSlug = (s) => (s || '').toLowerCase().trim()
+              .replace(/[\u2010-\u2015]/g, '-')
               .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
             product = products.find(p => p.slug === slug) || products.find(p => computeSlug(p.name) === slug) || null;
           } catch (e) { product = null; }
@@ -179,6 +189,16 @@ export default {
             return new Response(html, {
               headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' }
             });
+          }
+          // Product not matched by slug — still fix the canonical to point at THIS URL
+          // (never leave it defaulting to the homepage, which causes Google to treat
+          // distinct product pages as duplicates of "/").
+          {
+            const esc2 = (s) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            html = html.replace(
+              '<link rel="canonical" href="https://digitalitems.store/" />',
+              `<link rel="canonical" href="https://digitalitems.store/products/${esc2(slug)}" />`
+            );
           }
           return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
         } catch (e) {
