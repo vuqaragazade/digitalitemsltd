@@ -2562,6 +2562,14 @@
               <div id="rebuild-progress" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
             </div>
           </div>
+
+          <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:8px;padding-bottom:16px;border-bottom:1px solid var(--border)">Import Customers (Shopify CSV)</h2>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Upload your Shopify <strong>Customers</strong> export (not Orders — from Shopify Admin → Customers → Export). These contacts join the "All Customers" email segment even if they have no order on this site.</p>
+            <input type="file" id="import-customers-file" accept=".csv" aria-label="Upload customers CSV file for import" style="font-size:13px;color:var(--muted);margin-bottom:14px" />
+            <button class="btn btn-primary" onclick="importShopifyCustomersCSV()" id="import-customers-btn">Import Customers CSV</button>
+            <div id="import-customers-progress" style="margin-top:14px;font-size:13px;color:var(--muted)"></div>
+          </div>
           <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
             <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">Payment Limits</h2>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -6384,6 +6392,82 @@ async function importShopifyCSV() {
     progress.textContent = 'Import failed: ' + e.message;
   }
   btn.disabled = false;
+}
+
+async function importShopifyCustomersCSV() {
+  const fileInput = document.getElementById('import-customers-file');
+  const progress = document.getElementById('import-customers-progress');
+  const btn = document.getElementById('import-customers-btn');
+  const file = fileInput.files[0];
+  if (!file) { showToast('Choose a CSV file first'); return; }
+
+  btn.disabled = true;
+  progress.textContent = 'Reading file...';
+
+  try {
+    const text = await file.text();
+    const contacts = parseShopifyCustomersCSV(text);
+    if (contacts.length === 0) { progress.textContent = 'No customer emails found in file.'; btn.disabled = false; return; }
+
+    progress.textContent = `Parsed ${contacts.length} contacts. Importing...`;
+
+    const batchSize = 200;
+    let added = 0, updated = 0, total = 0;
+    for (let i = 0; i < contacts.length; i += batchSize) {
+      const batch = contacts.slice(i, i + batchSize);
+      const res = await fetch(WORKER_URL + '/import-customers', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+        body: JSON.stringify({ contacts: batch })
+      });
+      const data = await res.json();
+      if (data.error) { progress.textContent = 'Error: ' + data.error; btn.disabled = false; return; }
+      added = data.added; updated = data.updated; total = data.total;
+      progress.textContent = `Imported ${Math.min(i+batchSize, contacts.length)} / ${contacts.length}...`;
+    }
+    progress.innerHTML = `<span style="color:#4ade80">✓ Done — ${added} new, ${updated} updated. Total contacts: ${total}.</span>`;
+    showToast('Customer import complete');
+  } catch(e) {
+    progress.textContent = 'Import failed: ' + e.message;
+  }
+  btn.disabled = false;
+}
+
+// Parse a Shopify "Customers" export (different columns than Orders export).
+// Robustly matches header names case-insensitively since Shopify's export can vary slightly.
+function parseShopifyCustomersCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim().toLowerCase());
+  const idx = (names) => {
+    for (const n of names) {
+      const i = headers.indexOf(n);
+      if (i > -1) return i;
+    }
+    return -1;
+  };
+  const emailIdx = idx(['email']);
+  const firstIdx = idx(['first name', 'firstname']);
+  const lastIdx = idx(['last name', 'lastname']);
+  const nameIdx = idx(['name']);
+  if (emailIdx === -1) return [];
+
+  const seen = new Set();
+  const contacts = [];
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const email = (row[emailIdx] || '').trim();
+    if (!email || !email.includes('@') || seen.has(email.toLowerCase())) continue;
+    seen.add(email.toLowerCase());
+    let name = '';
+    if (firstIdx > -1 || lastIdx > -1) {
+      name = [firstIdx > -1 ? row[firstIdx] : '', lastIdx > -1 ? row[lastIdx] : ''].filter(Boolean).join(' ').trim();
+    } else if (nameIdx > -1) {
+      name = (row[nameIdx] || '').trim();
+    }
+    contacts.push({ email, name });
+  }
+  return contacts;
 }
 
 // Parse Shopify orders CSV into our order format
