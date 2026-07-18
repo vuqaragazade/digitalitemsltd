@@ -235,6 +235,94 @@ export default {
       // Fall through to normal static serving on any error
     }
 
+    // Static/custom pages (About, Contact, Terms, Refund Policy, Privacy Policy, and any
+    // admin-created custom pages): inject correct title/description/canonical server-side.
+    // Without this, the raw HTML always shows the homepage's canonical, causing Google to
+    // pick its own canonical instead of trusting the page's declared one ("Duplicate,
+    // Google chose different canonical than user").
+    const STATIC_ROUTES = {
+      '/about': { key: 'about', title: 'About Us – DigitalItems.Store',
+        desc: 'DIGITALITEMS LTD is a UK-registered company providing premium social media accounts and digital marketing services worldwide.',
+        keywords: 'digitalitems store, about digitalitems, digitalitems ltd' },
+      '/contact': { key: 'contact', title: 'Contact Us – DigitalItems.Store',
+        desc: 'Contact DigitalItems.Store for questions about orders, products, or support. Reach us by email, WhatsApp, or Telegram.',
+        keywords: 'contact digitalitems, digitalitems support' },
+      '/terms': { key: 'terms', title: 'Terms of Service – DigitalItems.Store',
+        desc: 'Terms of Service for DigitalItems.Store. Read our policies on purchases, delivery, and acceptable use.',
+        keywords: 'digitalitems terms of service' },
+      '/refund-policy': { key: 'refund', title: 'Refund Policy – DigitalItems.Store',
+        desc: 'DigitalItems.Store refund and returns policy for digital products and social media accounts.',
+        keywords: 'digitalitems refund policy' },
+      '/privacy-policy': { key: 'privacy', title: 'Privacy Policy – DigitalItems.Store',
+        desc: 'Privacy Policy for DigitalItems.Store. Learn how we collect, use, and protect your personal information.',
+        keywords: 'digitalitems privacy policy' }
+    };
+
+    try {
+      const staticRoute = STATIC_ROUTES[url.pathname];
+      const customSlug = url.pathname.replace(/^\//, '');
+      if (staticRoute || customSlug) {
+        const pagesRes = await fetch(BACKEND + '/pages', { cf: { cacheTtl: 300, cacheEverything: true } });
+        const pagesData = await pagesRes.json();
+        const customPages = pagesData.pages || {};
+
+        let title = null, desc = null, keywords = null, matched = false;
+        if (staticRoute) {
+          const override = customPages[staticRoute.key];
+          title = (override && override.metaTitle) || staticRoute.title;
+          desc = (override && override.metaDesc) || staticRoute.desc;
+          keywords = (override && override.metaKeywords) || staticRoute.keywords;
+          matched = true;
+        } else if (customPages[customSlug]) {
+          const cp = customPages[customSlug];
+          title = cp.metaTitle || cp.title;
+          desc = cp.metaDesc || '';
+          keywords = cp.metaKeywords || '';
+          matched = true;
+        }
+
+        if (matched) {
+          const assetRes = await env.ASSETS.fetch(new Request('https://assets.local/index.html'));
+          let html = await assetRes.text();
+          const esc = (s) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+          if (title) {
+            html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`);
+            html = html.replace(
+              /<meta property="og:title" content="[^"]*" \/>/,
+              `<meta property="og:title" content="${esc(title)}" />`
+            );
+          }
+          if (desc) {
+            html = html.replace(
+              /<meta name="description" content="[^"]*" \/>/,
+              `<meta name="description" content="${esc(desc)}" />`
+            );
+            html = html.replace(
+              /<meta property="og:description" content="[^"]*" \/>/,
+              `<meta property="og:description" content="${esc(desc)}" />`
+            );
+          }
+          if (keywords) {
+            html = html.replace(
+              /<meta name="keywords" content="[^"]*" \/>/,
+              `<meta name="keywords" content="${esc(keywords)}" />`
+            );
+          }
+          html = html.replace(
+            '<link rel="canonical" href="https://digitalitems.store/" />',
+            `<link rel="canonical" href="https://digitalitems.store${esc(url.pathname)}" />`
+          );
+
+          return new Response(html, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' }
+          });
+        }
+      }
+    } catch (e) {
+      // Fall through to normal static serving on any error
+    }
+
     // Everything else: serve from static assets (SPA)
     return env.ASSETS.fetch(request);
   }
