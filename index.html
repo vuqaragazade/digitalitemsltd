@@ -2537,6 +2537,17 @@
             </div>
             <button class="btn btn-primary" onclick="saveTrustpilotSettings()">Save</button>
             <span id="tp-save-status" style="font-size:13px;color:var(--muted);margin-left:10px"></span>
+
+            <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:10px">Send a Test / Manual Invite</div>
+              <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Trigger a Trustpilot invitation for any email right now — useful for testing or inviting a past customer manually.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input aria-label="Customer email" type="email" id="tp-test-email" placeholder="customer@example.com" style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
+                <input aria-label="Customer name (optional)" type="text" id="tp-test-name" placeholder="Name (optional)" style="flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px" />
+                <button class="btn btn-ghost" onclick="sendTrustpilotTestInvite()">Send Invite</button>
+              </div>
+              <div id="tp-test-status" style="font-size:13px;color:var(--muted);margin-top:10px"></div>
+            </div>
           </div>
 
           <div class="checkout-box" style="max-width:560px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px">
@@ -6179,6 +6190,28 @@ async function saveTrustpilotSettings() {
     setTimeout(()=>{ status.textContent=''; }, 2000);
   } catch(e) {
     status.innerHTML = '<span style="color:#f87171">Failed to save</span>';
+  }
+}
+
+async function sendTrustpilotTestInvite() {
+  const status = document.getElementById('tp-test-status');
+  const email = document.getElementById('tp-test-email').value.trim();
+  const name = document.getElementById('tp-test-name').value.trim();
+  if (!email) { showToast('Enter an email first'); return; }
+  status.textContent = '⏳ Sending…';
+  try {
+    const res = await fetch(WORKER_URL + '/trustpilot-test-invite', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ email, name })
+    });
+    const data = await res.json();
+    if (data.error) { status.innerHTML = '<span style="color:#f87171">'+data.error+'</span>'; return; }
+    status.innerHTML = '<span style="color:#4ade80">✓ Invite triggered for '+email+'</span>';
+    document.getElementById('tp-test-email').value = '';
+    document.getElementById('tp-test-name').value = '';
+  } catch(e) {
+    status.innerHTML = '<span style="color:#f87171">Failed: '+e.message+'</span>';
   }
 }
 
