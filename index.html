@@ -2245,7 +2245,7 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
             <div class="admin-title" style="margin:0">Products</div>
             <div style="display:flex;gap:10px">
-              <button class="btn btn-ghost" onclick="syncProductSeoDefaults()" id="seo-sync-btn">🔄 Apply Latest SEO to All Products</button>
+              <button class="btn btn-ghost" onclick="syncProductSeoDefaults()" id="seo-sync-btn">🔄 Apply Latest Content to All Products</button>
               <button class="btn btn-primary" onclick="openAddProduct()">+ Add Product</button>
             </div>
           </div>
@@ -5019,9 +5019,9 @@ async function renderAnalytics() {
 async function syncProductSeoDefaults() {
   const status = document.getElementById('seo-sync-status');
   const overwrite = confirm(
-    'Apply the latest built-in SEO text (title/description/keywords) to all products?\n\n' +
-    'Click OK to REPLACE existing SEO text on every product with the latest version.\n' +
-    'Click Cancel to only FILL IN missing SEO text (keeps any custom SEO you already wrote).'
+    'Apply the latest built-in content (title/description/keywords/full description) to all products?\n\n' +
+    'Click OK to REPLACE existing text on every product with the latest version.\n' +
+    'Click Cancel to only FILL IN missing text (keeps any custom text you already wrote).'
   );
   let updated = 0;
   allProducts.forEach(p => {
@@ -5030,6 +5030,7 @@ async function syncProductSeoDefaults() {
     if (overwrite || !p.metaTitle) { if (def.metaTitle) { p.metaTitle = def.metaTitle; updated++; } }
     if (overwrite || !p.metaDesc) { if (def.metaDesc) p.metaDesc = def.metaDesc; }
     if (overwrite || !p.metaKeywords) { if (def.metaKeywords) p.metaKeywords = def.metaKeywords; }
+    if (overwrite || !p.fullDesc) { if (def.fullDesc) p.fullDesc = def.fullDesc; }
   });
   localStorage.setItem('di_products', JSON.stringify(allProducts));
   status.textContent = 'Syncing to server…';
