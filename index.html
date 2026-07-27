@@ -2408,18 +2408,25 @@
 
           <!-- Preview / Edit -->
           <div id="mkt-preview" class="checkout-box" style="display:none;max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px">
-            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">Preview & Edit</h2>
+            <h2 style="font-family:var(--font-display);font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">Preview</h2>
             <div class="form-group">
               <label>Subject</label>
-              <input type="text" id="mkt-edit-subject" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+              <input type="text" id="mkt-edit-subject" oninput="refreshMarketingPreview()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
             </div>
-            <div class="form-group">
-              <label>Body (HTML)</label>
-              <textarea id="mkt-edit-body" rows="12" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical"></textarea>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:10px">This is exactly how the email will look when it's sent:</p>
+            <iframe id="mkt-preview-frame" title="Email preview" style="width:100%;height:520px;border:1px solid var(--border);border-radius:10px;background:#0d0d0f"></iframe>
+            <div id="mkt-image-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+            <button type="button" class="btn btn-ghost" style="font-size:12px;margin-top:14px" onclick="toggleMarketingHtmlEditor()" id="mkt-toggle-html-btn">✏️ Edit HTML directly</button>
+            <div id="mkt-html-editor-wrap" style="display:none;margin-top:12px">
+              <div class="form-group">
+                <label>Body (HTML)</label>
+                <textarea id="mkt-edit-body" rows="12" oninput="refreshMarketingPreview()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical"></textarea>
+              </div>
             </div>
-            <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+            <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
               <button class="btn btn-primary" onclick="sendMarketingEmail()" id="mkt-send-btn">Send Campaign</button>
               <button class="btn btn-ghost" onclick="regenerateMarketingEmail()">🔄 Regenerate</button>
+              <button class="btn btn-ghost" onclick="regenerateMarketingImage()">🖼 Regenerate Image</button>
               <button class="btn btn-ghost" onclick="document.getElementById('mkt-preview').style.display='none'">Discard</button>
             </div>
             <div id="mkt-send-status" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
@@ -5734,35 +5741,102 @@ async function generateMarketingEmail() {
   const btn = document.getElementById('mkt-gen-btn');
   const status = document.getElementById('mkt-gen-status');
   btn.disabled = true;
-  status.innerHTML = '⏳ AI is drafting your email...';
+  status.innerHTML = '⏳ AI is drafting your email and generating an image...';
 
   try {
     const res = await fetch(WORKER_URL + '/generate-marketing-email', {
       method: 'POST',
       headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
-      body: JSON.stringify({ instructions, segmentName: seg ? seg.name : '' })
+      body: JSON.stringify({ instructions, segmentName: seg ? seg.name : '', withImage: true })
     });
     const data = await res.json();
     if (data.error) { status.innerHTML = '<span style="color:#f87171">'+data.error+'</span>'; btn.disabled = false; return; }
     generatedMarketingEmail = data.email;
     fillMarketingPreview(data.email);
-    status.innerHTML = '<span style="color:#4ade80">✓ Draft ready — review below before sending.</span>';
+    status.innerHTML = '<span style="color:#4ade80">✓ Draft ready — this is exactly how it will look.</span>';
   } catch(e) {
     status.innerHTML = '<span style="color:#f87171">Generation failed: '+e.message+'</span>';
   }
   btn.disabled = false;
 }
 
+// Mirrors the backend's emailTemplate() styling so the preview matches the real email exactly.
+function buildEmailPreviewHtml(subject, bodyHtml) {
+  return `<!DOCTYPE html><html><body style="margin:0;background:#0d0d0f;font-family:-apple-system,Segoe UI,sans-serif">
+<div style="max-width:520px;margin:0 auto;padding:32px 20px">
+  <div style="background:#141417;border:1px solid #2a2a32;border-radius:16px;padding:32px">
+    <div style="font-size:20px;font-weight:700;color:#ff6b35;margin-bottom:8px">DigitalItems.Store</div>
+    <h1 style="color:#f0f0f5;font-size:22px;margin:16px 0">${subject || ''}</h1>
+    <div style="color:#b0b0bb;font-size:15px;line-height:1.7">${bodyHtml || ''}</div>
+    <div style="margin-top:28px;padding-top:20px;border-top:1px solid #2a2a32;color:#7a7a8a;font-size:12px">
+      DIGITALITEMS LTD · London, UK<br>Questions? Contact admin@digitalitems.store
+    </div>
+  </div>
+</div></body></html>`;
+}
+
+function refreshMarketingPreview() {
+  const subject = document.getElementById('mkt-edit-subject').value;
+  const bodyHtml = document.getElementById('mkt-edit-body').value;
+  const frame = document.getElementById('mkt-preview-frame');
+  if (frame) frame.srcdoc = buildEmailPreviewHtml(subject, bodyHtml);
+}
+
+function toggleMarketingHtmlEditor() {
+  const wrap = document.getElementById('mkt-html-editor-wrap');
+  const btn = document.getElementById('mkt-toggle-html-btn');
+  const showing = wrap.style.display !== 'none';
+  wrap.style.display = showing ? 'none' : 'block';
+  btn.textContent = showing ? '✏️ Edit HTML directly' : '🙈 Hide HTML editor';
+}
+
 function fillMarketingPreview(email) {
   document.getElementById('mkt-preview').style.display = 'block';
   document.getElementById('mkt-edit-subject').value = email.subject || '';
-  document.getElementById('mkt-edit-body').value = email.bodyHtml || '';
+  let bodyHtml = email.bodyHtml || '';
+  if (email.image) {
+    const src = email.image.startsWith('http') ? email.image : (WORKER_URL + email.image);
+    bodyHtml = `<img src="${src}" alt="" style="width:100%;border-radius:10px;margin-bottom:16px" />` + bodyHtml;
+  }
+  document.getElementById('mkt-edit-body').value = bodyHtml;
   document.getElementById('mkt-send-status').textContent = '';
+  const imgStatus = document.getElementById('mkt-image-status');
+  if (imgStatus) imgStatus.innerHTML = email.imageError ? `<span style="color:#fbbf24">Image: ${email.imageError}</span>` : '';
+  refreshMarketingPreview();
   document.getElementById('mkt-preview').scrollIntoView({behavior:'smooth'});
 }
 
 async function regenerateMarketingEmail() {
   await generateMarketingEmail();
+}
+
+async function regenerateMarketingImage() {
+  const subject = document.getElementById('mkt-edit-subject').value.trim() || 'Marketing campaign';
+  const instructions = document.getElementById('mkt-instructions').value.trim();
+  const imgStatus = document.getElementById('mkt-image-status');
+  imgStatus.innerHTML = '⏳ Generating a new image…';
+  try {
+    const res = await fetch(WORKER_URL + '/generate-blog-image', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ title: subject, keywords: instructions, imagePrompt: (generatedMarketingEmail && generatedMarketingEmail.imagePrompt) || '' })
+    });
+    const data = await res.json();
+    if (data.error) { imgStatus.innerHTML = '<span style="color:#f87171">'+data.error+'</span>'; return; }
+    const src = data.image.startsWith('http') ? data.image : (WORKER_URL + data.image);
+    // Replace any existing leading <img> tag, or prepend one
+    const bodyEl = document.getElementById('mkt-edit-body');
+    const newImgTag = `<img src="${src}" alt="" style="width:100%;border-radius:10px;margin-bottom:16px" />`;
+    if (/^<img[^>]*>/.test(bodyEl.value.trim())) {
+      bodyEl.value = bodyEl.value.trim().replace(/^<img[^>]*>/, newImgTag);
+    } else {
+      bodyEl.value = newImgTag + bodyEl.value;
+    }
+    refreshMarketingPreview();
+    imgStatus.innerHTML = '<span style="color:#4ade80">✓ New image ready</span>';
+  } catch(e) {
+    imgStatus.innerHTML = '<span style="color:#f87171">Failed: '+e.message+'</span>';
+  }
 }
 
 async function sendMarketingEmail() {
@@ -5778,7 +5852,7 @@ async function sendMarketingEmail() {
 
   const btn = document.getElementById('mkt-send-btn');
   btn.disabled = true;
-  status.textContent = '⏳ Sending… this may take a moment for larger segments.';
+  status.textContent = '⏳ Sending… large segments can take several minutes, please keep this tab open.';
 
   try {
     const res = await fetch(WORKER_URL + '/send-marketing-email', {
