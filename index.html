@@ -1804,6 +1804,14 @@
         <div class="order-summary-items" id="order-summary"></div>
         <div id="upsell-section"></div>
         <div style="padding:16px 0;border-top:1px solid var(--border)">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Have a coupon code?</div>
+          <div style="display:flex;gap:8px">
+            <input aria-label="Coupon code" type="text" id="coupon-input" placeholder="Enter code" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;text-transform:uppercase" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}" />
+            <button type="button" class="btn btn-ghost" onclick="applyCoupon()" style="white-space:nowrap;font-size:13px;padding:9px 16px">Apply</button>
+          </div>
+          <div id="coupon-status" style="font-size:12px;margin-top:8px"></div>
+        </div>
+        <div style="padding:16px 0;border-top:1px solid var(--border)">
           <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Add a tip (optional)</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap" id="tip-buttons">
             <button type="button" class="tip-btn" data-tip="0" onclick="setTip(0,this)" style="flex:1;min-width:54px;padding:9px;border-radius:8px;border:1px solid var(--accent-btn);background:var(--accent-btn);color:#fff;font-size:13px;font-weight:600;cursor:pointer">None</button>
@@ -2127,6 +2135,7 @@
         <div class="admin-nav-item" onclick="adminTab('products',event)">🛍 Products</div>
         <div class="admin-nav-item" onclick="adminTab('pages',event)">📄 Pages</div>
         <div class="admin-nav-item" onclick="adminTab('catalogs',event)">🗂 Catalogs</div>
+        <div class="admin-nav-item" onclick="adminTab('coupons',event)">🎟 Coupons</div>
         <div class="admin-nav-item" onclick="adminTab('blog',event)">✍️ Blog</div>
         <div class="admin-nav-item" onclick="adminTab('marketing',event)">📧 Email Marketing</div>
         <div class="admin-nav-item" onclick="adminTab('users',event)">👥 Users</div>
@@ -2277,6 +2286,17 @@
           <div class="admin-title" style="margin-bottom:8px">Catalogs</div>
           <p style="color:var(--muted);font-size:13px;margin-bottom:24px">Edit the title, description and SEO for the category pages (Twitter, Reddit, Marketing).</p>
           <div id="admin-catalogs-list"></div>
+        </div>
+
+        <!-- Coupons Tab -->
+        <div id="admin-coupons-tab" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div class="admin-title" style="margin:0">Coupons</div>
+            <button class="btn btn-primary" onclick="editCoupon(null)">+ Add Coupon</button>
+          </div>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:24px">Create discount codes customers can apply at checkout.</p>
+          <div id="admin-coupons-list"></div>
+          <div id="coupon-editor"></div>
         </div>
 
         <!-- Blog Tab -->
@@ -3705,8 +3725,62 @@ function setCustomTip(val) {
   updateOrderTotalWithTip();
 }
 
+// ════════════════════════════════════════
+// COUPONS — checkout application
+// ════════════════════════════════════════
+let appliedCoupon = null; // { code, discountAmount }
+
+function cartItemsForCoupon() {
+  return cart.filter(c => c.id !== 'tip').map(c => ({
+    productId: c.id, category: c.category, price: c.price, qty: c.qty
+  }));
+}
+
+async function applyCoupon() {
+  const input = document.getElementById('coupon-input');
+  const status = document.getElementById('coupon-status');
+  const code = input.value.trim().toUpperCase();
+  if (!code) { status.innerHTML = '<span style="color:#f87171">Enter a code first</span>'; return; }
+  status.innerHTML = '⏳ Checking…';
+  try {
+    const email = (document.getElementById('co-email') || {}).value || '';
+    const res = await fetch(WORKER_URL + '/validate-coupon', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ code, items: cartItemsForCoupon(), email })
+    });
+    const data = await res.json();
+    if (!data.valid) {
+      appliedCoupon = null;
+      status.innerHTML = '<span style="color:#f87171">' + (data.error || 'Invalid coupon') + '</span>';
+      updateOrderTotalWithTip();
+      return;
+    }
+    appliedCoupon = { code: data.code, discountAmount: data.discountAmount };
+    status.innerHTML = `<span style="color:#4ade80">✓ "${data.code}" applied — saving $${data.discountAmount.toFixed(2)}</span>`;
+    input.value = data.code;
+    input.disabled = true;
+    updateOrderTotalWithTip();
+  } catch(e) {
+    status.innerHTML = '<span style="color:#f87171">Could not validate coupon</span>';
+  }
+}
+
+function removeCoupon() {
+  appliedCoupon = null;
+  const input = document.getElementById('coupon-input');
+  if (input) { input.value = ''; input.disabled = false; }
+  const status = document.getElementById('coupon-status');
+  if (status) status.textContent = '';
+  updateOrderTotalWithTip();
+}
+
+function couponDiscountAmount() {
+  return appliedCoupon ? (appliedCoupon.discountAmount || 0) : 0;
+}
+
 function orderTotalWithTip() {
-  return cartTotal() - bundleDiscountAmount() + currentTip;
+  return Math.max(0, cartTotal() - bundleDiscountAmount() - couponDiscountAmount() + currentTip);
 }
 
 // Build order items array including discount and tip as line items
@@ -3715,6 +3789,10 @@ function buildOrderItems() {
   const discount = bundleDiscountAmount();
   if (discount > 0) {
     items.push({ name: 'Bundle Discount', qty: 1, price: -discount });
+  }
+  const coupon = couponDiscountAmount();
+  if (coupon > 0) {
+    items.push({ name: `Coupon (${appliedCoupon.code})`, qty: 1, price: -coupon });
   }
   if (currentTip > 0) {
     items.push({ name: 'Tip', qty: 1, price: currentTip });
@@ -3742,6 +3820,23 @@ function updateOrderTotalWithTip() {
     discRow.innerHTML = `<span class="label" style="font-weight:400;color:#4ade80">Discount</span><span style="color:#4ade80">−$${discount.toFixed(2)}</span>`;
   } else if (discRow) {
     discRow.style.display = 'none';
+  }
+  // Coupon discount row
+  const coupon = couponDiscountAmount();
+  let couponRow = document.getElementById('coupon-discount-row');
+  if (coupon > 0) {
+    if (!couponRow) {
+      couponRow = document.createElement('div');
+      couponRow.id = 'coupon-discount-row';
+      couponRow.className = 'order-total-row';
+      couponRow.style.cssText = 'display:flex';
+      const tr = document.getElementById('tip-row');
+      if (tr && tr.parentNode) tr.parentNode.insertBefore(couponRow, tr);
+    }
+    couponRow.style.display = 'flex';
+    couponRow.innerHTML = `<span class="label" style="font-weight:400;color:#4ade80">Coupon (${appliedCoupon.code}) <span onclick="removeCoupon()" style="cursor:pointer;color:var(--muted);text-decoration:underline;margin-left:4px">remove</span></span><span style="color:#4ade80">−$${coupon.toFixed(2)}</span>`;
+  } else if (couponRow) {
+    couponRow.style.display = 'none';
   }
   if (tipRow && tipDisplay) {
     if (currentTip > 0) {
@@ -3925,6 +4020,18 @@ function renderCheckout() {
   `).join('');
   document.getElementById('order-total').textContent = '$' + cartTotal().toFixed(2);
   renderUpsell();
+  // Restore coupon input UI to reflect current applied-coupon state (e.g. after re-navigating)
+  const couponInput = document.getElementById('coupon-input');
+  const couponStatus = document.getElementById('coupon-status');
+  if (couponInput) {
+    if (appliedCoupon) {
+      couponInput.value = appliedCoupon.code;
+      couponInput.disabled = true;
+      if (couponStatus) couponStatus.innerHTML = `<span style="color:#4ade80">✓ "${appliedCoupon.code}" applied — saving $${appliedCoupon.discountAmount.toFixed(2)}</span>`;
+    } else {
+      couponInput.disabled = false;
+    }
+  }
   // Reset tip selection on checkout render
   currentTip = 0;
   const acceptBox = document.getElementById('accept-terms');
@@ -4031,7 +4138,34 @@ function addUpsellItem(productId) {
   saveCart();
   updateCartUI();
   renderCheckout(); // re-render to show new item + discount
+  refreshAppliedCoupon(); // re-validate so the coupon discount stays accurate for the new cart
   showToast('Added to your order');
+}
+
+// Silently re-validate the currently applied coupon (e.g. after the cart changes)
+// so its discount amount stays accurate. Removes it if it's no longer valid.
+async function refreshAppliedCoupon() {
+  if (!appliedCoupon) return;
+  const code = appliedCoupon.code;
+  try {
+    const email = (document.getElementById('co-email') || {}).value || '';
+    const res = await fetch(WORKER_URL + '/validate-coupon', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ code, items: cartItemsForCoupon(), email })
+    });
+    const data = await res.json();
+    if (!data.valid) {
+      appliedCoupon = null;
+      const status = document.getElementById('coupon-status');
+      if (status) status.innerHTML = '<span style="color:#fbbf24">Coupon removed — no longer applicable to your updated cart.</span>';
+      const input = document.getElementById('coupon-input');
+      if (input) { input.value = ''; input.disabled = false; }
+    } else {
+      appliedCoupon = { code: data.code, discountAmount: data.discountAmount };
+    }
+  } catch(e) {}
+  updateOrderTotalWithTip();
 }
 
 function refreshLimitWarning() {
@@ -4242,7 +4376,8 @@ async function processCryptoPayment() {
         email,
         name,
         telegram: document.getElementById('co-tg').value.trim(),
-        items: buildOrderItems()
+        items: buildOrderItems(),
+        couponCode: appliedCoupon ? appliedCoupon.code : null
       })
     });
     const data = await res.json();
@@ -4306,6 +4441,7 @@ async function processPayment() {
     telegram: document.getElementById('co-tg').value.trim(),
     items: buildOrderItems(),
     total,
+    couponCode: appliedCoupon ? appliedCoupon.code : null,
     status: 'pending',
     date: new Date().toISOString()
   };
@@ -4337,7 +4473,8 @@ async function processPayment() {
           email,
           name,
           telegram: document.getElementById('co-tg').value.trim(),
-          items: buildOrderItems()
+          items: buildOrderItems(),
+          couponCode: appliedCoupon ? appliedCoupon.code : null
         })
       });
       const data = await res.json();
@@ -4619,7 +4756,7 @@ function adminLogout() {
 }
 
 function adminTab(tab, evt) {
-  ['orders','analytics','products','pages','catalogs','blog','marketing','users','profile','settings'].forEach(t => {
+  ['orders','analytics','products','pages','catalogs','coupons','blog','marketing','users','profile','settings'].forEach(t => {
     const el = document.getElementById('admin-'+t+'-tab');
     if (el) el.style.display = t === tab ? 'block' : 'none';
   });
@@ -4631,6 +4768,7 @@ function adminTab(tab, evt) {
   if (tab === 'products') { if (!adminOrders || adminOrders.length === 0) { renderAdminOrders(null).then(()=>renderAdminProducts()); } else { renderAdminProducts(); } }
   if (tab === 'pages') renderAdminPages();
   if (tab === 'catalogs') renderAdminCatalogs();
+  if (tab === 'coupons') loadAdminCoupons();
   if (tab === 'blog') loadAdminBlogs();
   if (tab === 'marketing') loadCustomerSegments();
   if (tab === 'users') renderAdminUsers();
@@ -6987,6 +7125,253 @@ function populateProductCategoryDropdown() {
   const cur = sel.value;
   sel.innerHTML = catalogsData.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   if (cur) sel.value = cur;
+}
+
+// ════════════════════════════════════════
+// COUPONS — admin management
+// ════════════════════════════════════════
+let couponsData = [];
+let editingCouponId = null;
+
+async function loadAdminCoupons() {
+  try {
+    const res = await fetch(WORKER_URL + '/coupons', { headers: { 'X-Admin-Password': adminPassword } });
+    const data = await res.json();
+    couponsData = data.coupons || [];
+  } catch(e) { couponsData = []; }
+  renderAdminCouponsList();
+}
+
+function couponScopeLabel(c) {
+  if (c.appliesTo === 'product') {
+    const p = (allProducts || []).find(x => x.id === c.productId);
+    return 'Product: ' + (p ? p.name : c.productId || '—');
+  }
+  if (c.appliesTo === 'category') {
+    const cat = (catalogsData || []).find(x => x.id === c.categoryId);
+    return 'Category: ' + (cat ? cat.name : c.categoryId || '—');
+  }
+  return 'All products';
+}
+
+function renderAdminCouponsList() {
+  const box = document.getElementById('admin-coupons-list');
+  if (!couponsData.length) {
+    box.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px 0">No coupons yet. Click "+ Add Coupon" to create one.</div>';
+    return;
+  }
+  box.innerHTML = couponsData.map(c => {
+    const valueLabel = c.type === 'percent' ? `${c.value}%${c.maxDiscountAmount ? ' (max $'+Number(c.maxDiscountAmount).toFixed(2)+')' : ''}` : `$${Number(c.value).toFixed(2)}`;
+    const conditions = [];
+    if (c.minItems) conditions.push(`min ${c.minItems} item(s)`);
+    if (c.minAmount) conditions.push(`min $${Number(c.minAmount).toFixed(2)}`);
+    if (c.maxUsesPerUser) conditions.push(`max ${c.maxUsesPerUser}/user`);
+    if (c.expiresAt) conditions.push('expires ' + new Date(c.expiresAt).toLocaleDateString());
+    return `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="min-width:0">
+        <div style="font-weight:700;font-size:14px;font-family:monospace;letter-spacing:0.5px">${c.code} <span style="font-weight:400;color:var(--accent1);font-family:var(--font-body)">${valueLabel}</span> ${c.active ? '' : '<span style="color:#f87171;font-size:11px;font-weight:600">(INACTIVE)</span>'}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">${couponScopeLabel(c)}${conditions.length ? ' · ' + conditions.join(' · ') : ''}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Used ${c.totalUses || 0} time(s)</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="toggleCouponActive('${c.id}')">${c.active ? 'Deactivate' : 'Activate'}</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="editCoupon('${c.id}')">✏️ Edit</button>
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px;color:#f87171" onclick="deleteCoupon('${c.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function editCoupon(id) {
+  editingCouponId = id;
+  const c = id ? couponsData.find(x => x.id === id) : {
+    code:'', active:true, type:'percent', value:10, maxDiscountAmount:'',
+    appliesTo:'all', categoryId:'', productId:'', minItems:'', minAmount:'',
+    maxUsesPerUser:'', expiresAt:''
+  };
+  if (!c) return;
+  const catOptions = (catalogsData || []).map(cat => `<option value="${cat.id}" ${c.categoryId===cat.id?'selected':''}>${cat.name}</option>`).join('');
+  const prodOptions = (allProducts || []).map(p => `<option value="${p.id}" ${c.productId===p.id?'selected':''}>${p.name}</option>`).join('');
+  const editor = document.getElementById('coupon-editor');
+  editor.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--accent1);border-radius:12px;padding:22px;margin-top:16px;max-width:640px">
+      <div style="font-weight:600;font-size:15px;margin-bottom:18px">${id ? 'Edit Coupon' : 'New Coupon'}</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label>Coupon Code</label>
+          <input type="text" id="cp-code" value="${(c.code||'').replace(/"/g,'&quot;')}" placeholder="SAVE20" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;text-transform:uppercase" />
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="cp-active" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px">
+            <option value="true" ${c.active!==false?'selected':''}>Active</option>
+            <option value="false" ${c.active===false?'selected':''}>Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label>Discount Type</label>
+          <select id="cp-type" onchange="toggleCouponMaxDiscountField()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px">
+            <option value="percent" ${c.type==='percent'?'selected':''}>Percentage (%)</option>
+            <option value="fixed" ${c.type==='fixed'?'selected':''}>Fixed Amount ($)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label id="cp-value-label">Value</label>
+          <input type="number" id="cp-value" value="${c.value||''}" min="0" step="0.01" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+        </div>
+      </div>
+
+      <div class="form-group" id="cp-maxdiscount-group">
+        <label>Max Discount Amount <span style="color:var(--muted);font-weight:400">(caps a % discount, e.g. "20% off, up to $50")</span></label>
+        <input type="number" id="cp-maxdiscount" value="${c.maxDiscountAmount||''}" min="0" step="0.01" placeholder="No cap" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+      </div>
+
+      <div class="form-group">
+        <label>Applies To</label>
+        <select id="cp-appliesto" onchange="toggleCouponScopeFields()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px">
+          <option value="all" ${c.appliesTo==='all'?'selected':''}>All Products</option>
+          <option value="category" ${c.appliesTo==='category'?'selected':''}>Specific Category</option>
+          <option value="product" ${c.appliesTo==='product'?'selected':''}>Specific Product</option>
+        </select>
+      </div>
+      <div class="form-group" id="cp-category-group">
+        <label>Category</label>
+        <select id="cp-categoryid" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px">${catOptions}</select>
+      </div>
+      <div class="form-group" id="cp-product-group">
+        <label>Product</label>
+        <select id="cp-productid" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px">${prodOptions}</select>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label>Min Items in Cart <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+          <input type="number" id="cp-minitems" value="${c.minItems||''}" min="0" step="1" placeholder="No minimum" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+        </div>
+        <div class="form-group">
+          <label>Min Order Amount ($) <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+          <input type="number" id="cp-minamount" value="${c.minAmount||''}" min="0" step="0.01" placeholder="No minimum" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label>Max Uses Per Customer <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+          <input type="number" id="cp-maxuses" value="${c.maxUsesPerUser||''}" min="1" step="1" placeholder="Unlimited" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+        </div>
+        <div class="form-group">
+          <label>Expires On <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+          <input type="date" id="cp-expires" value="${c.expiresAt ? c.expiresAt.slice(0,10) : ''}" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px" />
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" onclick="saveCoupon()">Save</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('coupon-editor').innerHTML=''">Cancel</button>
+      </div>
+      <div id="cp-status" style="margin-top:12px;font-size:13px;color:var(--muted)"></div>
+    </div>
+  `;
+  toggleCouponMaxDiscountField();
+  toggleCouponScopeFields();
+  editor.scrollIntoView({behavior:'smooth'});
+}
+
+function toggleCouponMaxDiscountField() {
+  const type = document.getElementById('cp-type').value;
+  document.getElementById('cp-maxdiscount-group').style.display = type === 'percent' ? 'block' : 'none';
+  document.getElementById('cp-value-label').textContent = type === 'percent' ? 'Value (%)' : 'Value ($)';
+}
+
+function toggleCouponScopeFields() {
+  const scope = document.getElementById('cp-appliesto').value;
+  document.getElementById('cp-category-group').style.display = scope === 'category' ? 'block' : 'none';
+  document.getElementById('cp-product-group').style.display = scope === 'product' ? 'block' : 'none';
+}
+
+async function saveCoupon() {
+  const status = document.getElementById('cp-status');
+  const code = document.getElementById('cp-code').value.trim().toUpperCase();
+  if (!code) { status.innerHTML = '<span style="color:#f87171">Coupon code is required.</span>'; return; }
+  const value = parseFloat(document.getElementById('cp-value').value);
+  if (!value || value <= 0) { status.innerHTML = '<span style="color:#f87171">Enter a valid discount value.</span>'; return; }
+
+  const clash = couponsData.find(c => c.id !== editingCouponId && (c.code||'').toUpperCase() === code);
+  if (clash) { status.innerHTML = '<span style="color:#f87171">A coupon with this code already exists.</span>'; return; }
+
+  const type = document.getElementById('cp-type').value;
+  const appliesTo = document.getElementById('cp-appliesto').value;
+  const expiresVal = document.getElementById('cp-expires').value;
+
+  const record = {
+    id: editingCouponId || ('cp' + Date.now()),
+    code,
+    active: document.getElementById('cp-active').value === 'true',
+    type,
+    value,
+    maxDiscountAmount: type === 'percent' ? (parseFloat(document.getElementById('cp-maxdiscount').value) || null) : null,
+    appliesTo,
+    categoryId: appliesTo === 'category' ? document.getElementById('cp-categoryid').value : null,
+    productId: appliesTo === 'product' ? document.getElementById('cp-productid').value : null,
+    minItems: parseInt(document.getElementById('cp-minitems').value) || 0,
+    minAmount: parseFloat(document.getElementById('cp-minamount').value) || 0,
+    maxUsesPerUser: parseInt(document.getElementById('cp-maxuses').value) || null,
+    expiresAt: expiresVal ? new Date(expiresVal + 'T23:59:59').toISOString() : null,
+    usesByEmail: (editingCouponId && couponsData.find(c=>c.id===editingCouponId) || {}).usesByEmail || {},
+    totalUses: (editingCouponId && couponsData.find(c=>c.id===editingCouponId) || {}).totalUses || 0,
+    createdAt: (editingCouponId && couponsData.find(c=>c.id===editingCouponId) || {}).createdAt || new Date().toISOString()
+  };
+
+  if (editingCouponId) {
+    const idx = couponsData.findIndex(c => c.id === editingCouponId);
+    couponsData[idx] = record;
+  } else {
+    couponsData.push(record);
+  }
+
+  status.textContent = 'Saving…';
+  const ok = await persistCoupons();
+  if (!ok) { status.innerHTML = '<span style="color:#f87171">Save failed.</span>'; return; }
+  document.getElementById('coupon-editor').innerHTML = '';
+  renderAdminCouponsList();
+  showToast('Coupon saved');
+}
+
+async function toggleCouponActive(id) {
+  const c = couponsData.find(x => x.id === id);
+  if (!c) return;
+  c.active = !c.active;
+  const ok = await persistCoupons();
+  if (!ok) { c.active = !c.active; showToast('Failed to update'); return; }
+  renderAdminCouponsList();
+}
+
+async function deleteCoupon(id) {
+  const c = couponsData.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`Delete coupon "${c.code}"? This cannot be undone.`)) return;
+  couponsData = couponsData.filter(x => x.id !== id);
+  const ok = await persistCoupons();
+  if (!ok) { showToast('Delete failed'); return; }
+  renderAdminCouponsList();
+  showToast('Coupon deleted');
+}
+
+async function persistCoupons() {
+  try {
+    const res = await fetch(WORKER_URL + '/coupons', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Admin-Password':adminPassword},
+      body: JSON.stringify({ coupons: couponsData })
+    });
+    const data = await res.json();
+    return !data.error;
+  } catch(e) { return false; }
 }
 
 async function renderAdminPages() {
