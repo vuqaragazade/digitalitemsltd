@@ -5392,7 +5392,11 @@ function injectProductSchema(p) {
 
   const inStock = (p.stock === undefined || p.stock === null || p.stock > 0);
   const img = p.image || (typeof CATEGORY_IMG !== 'undefined' ? (CATEGORY_IMG[p.category] || CATEGORY_IMG.twitter) : '');
-  const imgUrl = img && img.startsWith('http') ? img : ('https://digitalitems.store' + (img || ''));
+  // Google's structured data requires a real, fetchable http(s) image URL — inline
+  // "data:" URIs (our SVG fallback icons) are invalid here and get rejected, so we
+  // only include the image field when we actually have a real hosted URL.
+  const isRealImgUrl = !!img && (img.startsWith('http') || img.startsWith('/img/'));
+  const imgUrl = isRealImgUrl ? (img.startsWith('http') ? img : ('https://digitalitems.store' + img)) : null;
   const slug = p.slug || (typeof slugify === 'function' ? slugify(p.name) : '');
 
   const schema = {
@@ -5400,7 +5404,6 @@ function injectProductSchema(p) {
     "@type": "Product",
     "name": p.name,
     "description": p.metaDesc || p.desc || ('Buy ' + p.name + ' at DigitalItems.Store'),
-    "image": imgUrl,
     "brand": { "@type": "Brand", "name": "DigitalItems.Store" },
     "offers": {
       "@type": "Offer",
@@ -5447,6 +5450,7 @@ function injectProductSchema(p) {
       }
     }
   };
+  if (imgUrl) schema.image = imgUrl;
 
   const s = document.createElement('script');
   s.type = 'application/ld+json';
