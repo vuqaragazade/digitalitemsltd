@@ -165,6 +165,49 @@ export default {
             inject += `<meta property="og:description" content="${esc(desc)}" />`;
             inject += `<meta property="og:type" content="product" />`;
             if (img) inject += `<meta property="og:image" content="${esc(img)}" />`;
+
+            // Inject the Product JSON-LD structured data server-side too — relying on
+            // client-side JS alone risks Google's renderer capturing the page before our
+            // async product fetch + schema injection finishes, which strips the "image"
+            // field (or the whole block) from what Google actually sees.
+            const inStock = (product.stock === undefined || product.stock === null || product.stock > 0);
+            const schema = {
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": product.name,
+              "description": desc,
+              "brand": { "@type": "Brand", "name": "DigitalItems.Store" },
+              "offers": {
+                "@type": "Offer",
+                "url": `https://digitalitems.store/products/${slug}`,
+                "priceCurrency": "USD",
+                "price": Number(product.price).toFixed(2),
+                "availability": inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                "itemCondition": "https://schema.org/NewCondition",
+                "seller": { "@type": "Organization", "name": "DigitalItems LTD" },
+                "hasMerchantReturnPolicy": {
+                  "@type": "MerchantReturnPolicy",
+                  "applicableCountry": "GB",
+                  "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted",
+                  "merchantReturnDays": 0,
+                  "returnMethod": "https://schema.org/ReturnByMail",
+                  "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility"
+                },
+                "shippingDetails": {
+                  "@type": "OfferShippingDetails",
+                  "shippingRate": { "@type": "MonetaryAmount", "value": "0.00", "currency": "USD" },
+                  "shippingDestination": { "@type": "DefinedRegion", "addressCountry": { "@type": "Country", "name": "GB" } },
+                  "deliveryTime": {
+                    "@type": "ShippingDeliveryTime",
+                    "handlingTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 1, "unitCode": "DAY" },
+                    "transitTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 1, "unitCode": "DAY" }
+                  }
+                }
+              }
+            };
+            if (img) schema.image = img;
+            inject += `<script type="application/ld+json" id="product-schema">${JSON.stringify(schema)}</script>`;
+
             html = html.replace('<head>', '<head>' + inject);
             // Replace the static <title> instead of adding a duplicate one
             html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`);
