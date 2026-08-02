@@ -161,10 +161,25 @@ export default {
               ? (product.image.startsWith('http') ? product.image : BACKEND + product.image)
               : '';
 
-            let inject = `<meta property="og:title" content="${esc(title)}" />`;
-            inject += `<meta property="og:description" content="${esc(desc)}" />`;
-            inject += `<meta property="og:type" content="product" />`;
-            if (img) inject += `<meta property="og:image" content="${esc(img)}" />`;
+            let inject = '';
+            html = html.replace(
+              /<meta property="og:type" content="[^"]*" \/>/,
+              `<meta property="og:type" content="product" />`
+            );
+            html = html.replace(
+              /<meta property="og:title" content="[^"]*" \/>/,
+              `<meta property="og:title" content="${esc(title)}" />`
+            );
+            html = html.replace(
+              /<meta property="og:description" content="[^"]*" \/>/,
+              `<meta property="og:description" content="${esc(desc)}" />`
+            );
+            if (img) {
+              html = html.replace(
+                /<meta property="og:image" content="[^"]*" \/>/,
+                `<meta property="og:image" content="${esc(img)}" />`
+              );
+            }
 
             // Inject the Product JSON-LD structured data server-side too — relying on
             // client-side JS alone risks Google's renderer capturing the page before our
@@ -207,6 +222,7 @@ export default {
             };
             if (img) schema.image = img;
             inject += `<script type="application/ld+json" id="product-schema">${JSON.stringify(schema)}</script>`;
+            inject += `<!-- SCHEMA_FIX_MARKER_v2_2026-07-31 -->`;
 
             html = html.replace('<head>', '<head>' + inject);
             // Replace the static <title> instead of adding a duplicate one
@@ -390,4 +406,3 @@ export default {
     return env.ASSETS.fetch(request);
   }
 };
- 
